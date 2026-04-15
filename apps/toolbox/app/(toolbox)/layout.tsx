@@ -1,5 +1,6 @@
 import { SkipToContent } from "@numera/ui";
 import { Sidebar, BottomTabBar } from "./components/sidebar";
+import { NotificationCountProvider } from "./components/notification-count-context";
 
 export default function ToolboxLayout({
   children,
@@ -7,7 +8,7 @@ export default function ToolboxLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <NotificationCountProvider>
       <SkipToContent />
       <div className="flex h-[100dvh] overflow-hidden">
         <Sidebar />
@@ -20,6 +21,6 @@ export default function ToolboxLayout({
         </main>
       </div>
       <BottomTabBar />
-    </>
+    </NotificationCountProvider>
   );
 }

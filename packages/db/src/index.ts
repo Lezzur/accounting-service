@@ -1,6 +1,6 @@
 // @numera/db — Supabase client, TypeScript types, and Zod validation schemas
 
-export { createClient, createServiceClient } from './client.js';
+export { createClient, createBrowserClient, createServiceClient } from './client.js';
 
 export type {
   Database,

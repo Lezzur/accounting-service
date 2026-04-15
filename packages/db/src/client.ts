@@ -16,6 +16,22 @@ export function createClient(): SupabaseClient<Database> {
 }
 
 /**
+ * Creates an anon-key Supabase client safe for use in the browser (Next.js client
+ * components). Reads NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+ * which Next.js inlines at build time for client bundles.
+ */
+export function createBrowserClient(): SupabaseClient<Database> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    );
+  }
+  return createSupabaseClient<Database>(url, key);
+}
+
+/**
  * Creates a service-role Supabase client for Edge Functions that need to
  * bypass Row Level Security (e.g. Gmail webhook, scheduled jobs).
  * Reads SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from the environment.

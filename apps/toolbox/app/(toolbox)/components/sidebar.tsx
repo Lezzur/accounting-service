@@ -20,6 +20,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { cn } from "@numera/ui";
+import { useNotificationCount } from "./notification-count-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,13 +138,17 @@ function ModuleTab({
   isActive,
   isCollapsed,
   href,
+  badgeCount,
 }: {
   label: string;
   icon: React.ElementType;
   isActive: boolean;
   isCollapsed: boolean;
   href: string;
+  badgeCount?: number;
 }) {
+  const showBadge = badgeCount !== undefined && badgeCount > 0;
+
   return (
     <Link
       href={href}
@@ -157,9 +162,40 @@ function ModuleTab({
       )}
     >
       <Tooltip label={label} show={isCollapsed}>
-        <Icon size={20} className="shrink-0" aria-hidden="true" />
+        <span className="relative inline-flex">
+          <Icon size={20} className="shrink-0" aria-hidden="true" />
+          {showBadge && (
+            <span
+              aria-label={`${badgeCount} unprocessed notification${badgeCount === 1 ? "" : "s"}`}
+              className={cn(
+                "absolute -top-1.5 -right-1.5",
+                "flex items-center justify-center",
+                "min-w-[16px] h-4 px-1 rounded-full",
+                "bg-teal-600 text-white text-[10px] font-semibold leading-none",
+              )}
+            >
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          )}
+        </span>
       </Tooltip>
-      {!isCollapsed && <span>{label}</span>}
+      {!isCollapsed && (
+        <>
+          <span>{label}</span>
+          {showBadge && (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "ml-auto flex items-center justify-center",
+                "min-w-[20px] h-5 px-1.5 rounded-full",
+                "bg-teal-600 text-white text-[10px] font-semibold",
+              )}
+            >
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          )}
+        </>
+      )}
     </Link>
   );
 }
@@ -168,6 +204,7 @@ function ModuleTab({
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { unprocessedCount } = useNotificationCount();
 
   // Determine active module from URL
   const activeModule: Module = pathname.startsWith("/crm") ? "crm" : "workdesk";
@@ -271,6 +308,7 @@ export function Sidebar() {
           isActive={activeModule === "workdesk"}
           isCollapsed={isCollapsed}
           href="/workdesk"
+          badgeCount={unprocessedCount}
         />
       </div>
 
