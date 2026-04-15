@@ -88,3 +88,5 @@ export {
 } from "./components/dropdown-menu";
 
 export { cn } from "./lib/utils";
+
+export { SkipToContent } from "./components/skip-to-content";
