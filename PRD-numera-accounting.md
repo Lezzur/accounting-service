@@ -4,7 +4,7 @@
 **Reviewed by:** Lisa Hayes (Coordinator)
 **Status:** Reviewed
 **Last Updated:** 2026-04-15
-**Reviewers:** Rick (Product Owner / Developer), Accountant Partner (TBC)
+**Reviewers:** Rick (Product Owner / Developer), Accountant Partner (pending — validate CRM/Workdesk workflows post-M3)
 **Source:** DISCOVERY-accounting-service.md (2026-04-14, Approved, High Confidence)
 
 ---

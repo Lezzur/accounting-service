@@ -59,9 +59,11 @@ Source: DISCOVERY-accounting-service.md Section 9, approved by Rick.
 | `amber-100` | `#fef3c7` | Badge background: Pending/In Progress, manual override fields |
 | `green-500` | `#22c55e` | Success, on-track (decorative) |
 | `green-700` | `#15803d` | Badge text: Approved/Completed |
-| `teal-100` | `#ccfbf1` | Badge background: Approved |
+| `green-100` | `#dcfce7` | Badge background: Completed |
 
-**Additions from discussion (Winry):** `amber-700`, `red-700`, `green-700` were missing from the Discovery token set. Added to ensure WCAG AA badge contrast. `amber-700` on `amber-100` = ~7.2:1. `red-700` on `red-100` = ~7.8:1. `green-700` on `teal-100` = ~5.2:1. All pass AA.
+**Additions from discussion (Winry):** `amber-700`, `red-700`, `green-700` were missing from the Discovery token set. Added to ensure WCAG AA badge contrast. `amber-700` on `amber-100` = ~7.2:1. `red-700` on `red-100` = ~7.8:1. `green-700` on `green-100` = ~5.8:1. All pass AA.
+
+**Badge pairing clarification:** "Approved" status badges use `teal-100` bg + `teal-700` text (primary color scheme). "Completed" status badges use `green-100` bg + `green-700` text. The `teal-100` token in the primary tint row (above) serves both badge backgrounds and general primary tints.
 
 ### Typography
 
