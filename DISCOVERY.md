@@ -475,7 +475,7 @@ Deal closes in CRM
 Accountant creates invoice in Workdesk
     → Invoice generated from template with client data
     → Sent via Gmail
-    → Invoice status tracked in CRM (Sent → Viewed → Paid)
+    → Invoice status tracked in CRM (Sent → Paid; Overdue derived at read time)
     → Actual payment confirmed manually
 ```
 
