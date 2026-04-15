@@ -47,6 +47,9 @@ This API specification defines the contracts between Numera's frontend applicati
 | `send-invoice` | Supabase Auth JWT | Toolbox frontend |
 | `send-email` | Supabase Auth JWT | Toolbox frontend |
 | `suggest-category` | Supabase Auth JWT | Toolbox frontend |
+| `connect-gmail` | Supabase Auth JWT (admin only) | Toolbox Settings page |
+| `draft-email` | Supabase Auth JWT | Toolbox frontend |
+| `generate-client-deadlines` | Supabase Auth JWT | Toolbox frontend (onboarding flow) |
 | `handle-contact-form` | None (public) | Marketing website |
 | `gmail-webhook` | Google Pub/Sub message signature | Gmail API push notification |
 | `classify-email` | Service role key (internal) | Called by `gmail-webhook` only |
@@ -751,6 +754,20 @@ const { data, error } = await supabase.functions.invoke('generate-report', {
 
 **AI narrative:** Generated for `profit_and_loss` and `balance_sheet` only. Returns `null` for other report types. The narrative must be approved (`aiNarrativeApproved: true`) before it appears in exported PDFs/Sheets.
 
+#### Response Schemas — All Report Types
+
+All report types share the same envelope (`reportId`, `reportType`, `clientId`, `periodStart`, `periodEnd`, `sections`, `totals`, `validationWarnings`, `aiNarrative`, `aiNarrativeApproved`, `generatedAt`). The `sections` and `totals` shapes vary per type:
+
+**Balance Sheet:** `sections` = `[{title: "Assets", accountType: "asset", lineItems: [{code, name, balance}], subtotal}, {title: "Liabilities", ...}, {title: "Equity", ...}]`. `totals` = `{totalAssets, totalLiabilities, totalEquity, isBalanced}`. `aiNarrative` = generated.
+
+**Cash Flow:** `sections` = `[{title: "Operating Activities", lineItems: [{description, amount}], subtotal}, {title: "Investing Activities", ...}, {title: "Financing Activities", ...}]`. `totals` = `{netCashFlow, openingBalance, closingBalance}`. `aiNarrative` = `null`.
+
+**Bank Reconciliation:** `sections` = `[{title: "Book Balance", lineItems}, {title: "Outstanding Deposits", lineItems}, {title: "Outstanding Checks", lineItems}]`. `totals` = `{bookBalance, adjustedBookBalance, bankBalance, adjustedBankBalance, difference}`. `aiNarrative` = `null`.
+
+**AR Ageing / AP Ageing:** `sections` = `[{title: "Current", lineItems: [{clientOrVendor, invoiceNumber, amount, daysOutstanding}]}, {title: "1-30 Days", ...}, {title: "31-60 Days", ...}, {title: "61-90 Days", ...}, {title: "90+ Days", ...}]`. `totals` = `{totalOutstanding, currentTotal, days1to30, days31to60, days61to90, days90plus}`. `aiNarrative` = `null`.
+
+**General Ledger:** `sections` = `[{title: "1110 — Cash on Hand", accountCode: "1110", lineItems: [{date, description, debit, credit, runningBalance}], openingBalance, closingBalance}]` (one section per account with transactions in the period). `totals` = `{accountCount, transactionCount}`. `aiNarrative` = `null`.
+
 **Timeout:** 30 seconds.
 
 ---
@@ -910,6 +927,8 @@ const { data, error } = await supabase.functions.invoke('render-pdf', {
 - Invoices: `exports/{client_id}/invoices/{invoice_number}.pdf`
 
 **Signed URL:** Valid for 1 hour. Frontend uses this for download or preview.
+
+**AI Narrative Gate (reports only):** When `type = 'report'`, the function checks `financial_reports.ai_narrative_approved`. If the report has an `ai_narrative` that has not been approved (`ai_narrative_approved = false`), the narrative is **omitted from the PDF** — the report renders without the AI summary section. The PDF is still generated successfully; the narrative section is simply blank. This matches the UI behavior where export buttons are disabled until narrative approval, but provides a server-side safety net.
 
 #### Errors
 
@@ -1100,7 +1119,174 @@ const { data, error } = await supabase.functions.invoke('send-email', {
 
 ---
 
-### 6.8 `suggest-category`
+### 6.8 `connect-gmail`
+
+**Purpose:** Exchange a Google OAuth authorization code for access and refresh tokens, encrypt and store them, and initialize Gmail push notifications via `watch()`.
+
+**Auth:** Supabase Auth JWT (admin role only — Rick manages Gmail connections).
+
+**Invocation:**
+```typescript
+const { data, error } = await supabase.functions.invoke('connect-gmail', {
+  body: { code: 'authorization_code_from_google' }
+})
+```
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `code` | `string` | Yes | Google OAuth2 authorization code from the consent redirect |
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "gmailEmail": "accountant@gmail.com",
+    "connectionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "watchExpiration": "2026-04-22T10:00:00Z",
+    "status": "active"
+  },
+  "meta": {
+    "request_id": "req_connect01",
+    "duration_ms": 2200
+  }
+}
+```
+
+#### Processing Flow
+
+1. Verify caller has `admin` role.
+2. Exchange `code` for `access_token`, `refresh_token`, and `expires_in` via Google OAuth2 token endpoint.
+3. Fetch the Gmail address from the token via `gmail.users.getProfile()`.
+4. Encrypt `access_token` and `refresh_token` with AES-256-GCM (key from Supabase secrets).
+5. INSERT into `gmail_connections` (or UPDATE if row exists for this email): encrypted tokens, `token_expires_at`, `status = 'active'`.
+6. Call `gmail.users.watch()` with the configured Pub/Sub topic.
+7. UPDATE `gmail_connections` with `watch_history_id` and `watch_expiration` from the watch response.
+8. Return confirmation.
+
+#### Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `VALIDATION_FAILED` | Missing `code` parameter |
+| 403 | `FORBIDDEN` | Caller is not `admin` role |
+| 422 | `PROCESSING_FAILED` | OAuth token exchange failed (invalid or expired code) |
+| 503 | `DEPENDENCY_UNAVAILABLE` | Google OAuth or Gmail API unreachable |
+
+**Timeout:** 15 seconds.
+
+---
+
+### 6.9 `draft-email`
+
+**Purpose:** Generate an AI-drafted follow-up email for a client using Claude API. The accountant selects a template type and optionally provides a custom intent.
+
+**Auth:** Supabase Auth JWT.
+
+**Invocation:**
+```typescript
+const { data, error } = await supabase.functions.invoke('draft-email', {
+  body: {
+    clientId: 'uuid',
+    templateType: 'document_request',
+    customIntent: null
+  }
+})
+```
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `clientId` | `string (uuid)` | Yes | Client to draft email for |
+| `templateType` | `string (enum)` | Yes | One of: `document_request`, `deadline_reminder`, `report_delivery`, `custom` |
+| `customIntent` | `string` | No | Free-text intent. Required when `templateType = 'custom'`. Max 500 characters. |
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "subject": "Reminder: Please send January bank statement",
+    "body": "Hi Juan,\n\nI hope this message finds you well. I'm writing to kindly request your January 2026 bank statement for our monthly bookkeeping. If you could send it at your earliest convenience, that would help us stay on schedule.\n\nPlease reply to this email with the document attached, or forward it directly from your bank.\n\nThank you,\nNumera Accounting",
+    "templateType": "document_request",
+    "clientName": "Juan's Bakery"
+  },
+  "meta": {
+    "request_id": "req_draft01",
+    "duration_ms": 2500
+  }
+}
+```
+
+#### Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `VALIDATION_FAILED` | Missing required fields or `customIntent` missing when `templateType = 'custom'` |
+| 404 | `NOT_FOUND` | Client not found |
+| 503 | `DEPENDENCY_UNAVAILABLE` | Claude API unreachable |
+
+**Timeout:** 15 seconds.
+
+---
+
+### 6.10 `generate-client-deadlines`
+
+**Purpose:** Generate 12 months of BIR and bookkeeping deadlines for a specific client. Called during client onboarding (after client record is created) and can be invoked manually to regenerate deadlines.
+
+**Auth:** Supabase Auth JWT.
+
+**Invocation:**
+```typescript
+const { data, error } = await supabase.functions.invoke('generate-client-deadlines', {
+  body: { clientId: 'uuid' }
+})
+```
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `clientId` | `string (uuid)` | Yes | Client to generate deadlines for |
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "deadlinesCreated": 18,
+    "deadlinesSkipped": 0,
+    "clientId": "a1b2c3d4-0000-0000-0000-000000000001",
+    "periodCovered": "2026-04 to 2027-03"
+  },
+  "meta": {
+    "request_id": "req_deadlines01",
+    "duration_ms": 450
+  }
+}
+```
+
+#### Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `VALIDATION_FAILED` | Missing `clientId` |
+| 404 | `NOT_FOUND` | Client not found |
+| 500 | `INTERNAL_ERROR` | Deadline generation logic failed |
+
+**Idempotency:** Uses `ON CONFLICT (client_id, deadline_type, period_label) DO NOTHING`. Safe to call multiple times.
+
+**Timeout:** 10 seconds.
+
+---
+
+### 6.11 `suggest-category`
 
 **Purpose:** Suggest a chart of accounts category for a single transaction. Used when the accountant is reviewing a transaction with no category assigned (low AI confidence during batch processing) or wants a re-suggestion.
 
@@ -1178,7 +1364,7 @@ One of `transactionId` or (`description` + `amount` + `type` + `clientId`) must 
 
 ---
 
-### 6.9 `handle-contact-form`
+### 6.12 `handle-contact-form`
 
 **Purpose:** Process contact form submissions from the marketing website. Creates a lead in the CRM. Public endpoint — no authentication required.
 
@@ -1253,7 +1439,7 @@ Returns `200` in all cases to prevent information leakage (including honeypot ca
 
 ---
 
-### 6.10 `gmail-webhook`
+### 6.13 `gmail-webhook`
 
 **Purpose:** Receive Gmail push notifications via Google Pub/Sub and trigger the email classification pipeline.
 
@@ -1313,7 +1499,7 @@ Always returns `200 OK` with empty body. Gmail Pub/Sub retries on non-2xx respon
 
 ---
 
-### 6.11 Internal Functions (Not Client-Callable)
+### 6.14 Internal Functions (Not Client-Callable)
 
 These functions are invoked server-side by other Edge Functions. They use the Supabase service role key for DB writes. They are **not** exposed to the Toolbox frontend.
 
@@ -1593,6 +1779,14 @@ This section documents the external webhook contract — how Google's systems ca
 ---
 
 ## 12. Data Types Reference
+
+### 12.0 Naming Convention: camelCase vs snake_case
+
+**Edge Function request/response bodies:** Use `camelCase` for all field names (e.g., `clientId`, `reportType`, `transactionsCreated`). This matches TypeScript/JavaScript conventions and the Toolbox frontend's naming.
+
+**PostgREST (Supabase SDK) responses:** Use `snake_case` matching PostgreSQL column names (e.g., `client_id`, `report_type`, `created_at`). The Supabase SDK returns column names as-is from the database.
+
+**Frontend convention:** The Toolbox frontend transforms PostgREST `snake_case` responses to `camelCase` at the Supabase client layer using the generated TypeScript types from `supabase gen types`. Edge Function responses arrive pre-formatted in `camelCase` and require no transformation.
 
 ### 12.1 Monetary Values
 

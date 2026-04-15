@@ -79,6 +79,11 @@ graph TB
             EF_CONTACT["handle-contact-form<br/>Lead creation"]
             EF_CRON["cron-gmail-watch<br/>Renew Gmail watch()"]
             EF_DEADLINES["cron-generate-deadlines<br/>Annual deadline refresh"]
+            EF_CONNECT["connect-gmail<br/>OAuth token exchange"]
+            EF_DRAFT["draft-email<br/>AI email drafting"]
+            EF_SEND_INV["send-invoice<br/>PDF + Gmail send"]
+            EF_SEND_EMAIL["send-email<br/>General Gmail send"]
+            EF_GEN_DL["generate-client-deadlines<br/>Onboarding deadline gen"]
         end
     end
 
@@ -312,6 +317,7 @@ Sales pipeline records. Created from website contact form or manually.
 | `contact_phone` | `text` | | Optional |
 | `source` | `text` | NOT NULL, CHECK (`source` IN ('website_form', 'cal_booking', 'referral', 'manual')) | Lead source |
 | `stage` | `text` | NOT NULL, DEFAULT 'lead', CHECK (`stage` IN ('lead', 'contacted', 'call_booked', 'proposal_sent', 'negotiation', 'closed_won', 'closed_lost')) | Pipeline stage |
+| `close_reason` | `text` | CHECK (`length(close_reason) <= 500`) | Required when stage = 'closed_lost'. Why the lead was lost. |
 | `notes` | `text` | CHECK (`length(notes) <= 10000`) | Markdown-light notes |
 | `created_by` | `uuid` | FK → `users.id` | NULL for website-created leads |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT `now()` | |
@@ -1034,19 +1040,31 @@ Respond in JSON:
 ```json
 {
   "success": true,
-  "transactionsCreated": 5,
-  "transactions": [
-    {
-      "id": "uuid",
-      "date": "2026-01-15",
-      "description": "BDO ATM Withdrawal",
-      "amount": "5000.00",
-      "type": "debit",
-      "categoryCode": "1110",
-      "categoryConfidence": 0.92,
-      "status": "pending"
-    }
-  ]
+  "data": {
+    "transactionsCreated": 5,
+    "transactions": [
+      {
+        "id": "uuid",
+        "date": "2026-01-15",
+        "description": "BDO ATM Withdrawal",
+        "amount": "5000.00",
+        "type": "debit",
+        "categoryCode": "1110",
+        "categoryName": "Cash on Hand",
+        "categoryConfidence": 0.92,
+        "status": "pending",
+        "pageNumber": 1
+      }
+    ],
+    "documentsStored": 1,
+    "pagesProcessed": 3,
+    "extractionBatchId": "uuid",
+    "warnings": []
+  },
+  "meta": {
+    "request_id": "req_abc123",
+    "duration_ms": 12500
+  }
 }
 ```
 
@@ -1054,10 +1072,12 @@ Respond in JSON:
 
 | Status | Code | Description | Client Action |
 |--------|------|-------------|---------------|
-| 400 | `INVALID_NOTIFICATION` | Notification not found or already processed | Refresh notification list |
-| 409 | `ALREADY_PROCESSING` | Another request is processing this document | Wait and refresh |
-| 422 | `EXTRACTION_FAILED` | Vision API failed on all fallbacks | Transaction created with `manual_entry_required` status |
+| 400 | `VALIDATION_FAILED` | `notificationId` missing or not a valid UUID | Fix request |
+| 404 | `NOT_FOUND` | Notification does not exist | Refresh notification list |
+| 409 | `CONFLICT` | Notification already processing (started within last 5 min) or already processed | Wait and refresh |
+| 422 | `PROCESSING_FAILED` | Vision API failed on all fallbacks. Transactions created with `manual_entry_required` status. | Accountant enters manually |
 | 500 | `INTERNAL_ERROR` | Unexpected failure | Retry once |
+| 503 | `DEPENDENCY_UNAVAILABLE` | Both Claude Vision and Google Cloud Vision unreachable | Retry later |
 
 **Timeout:** 120 seconds (multi-page documents with fallback can take time).
 
@@ -1217,14 +1237,24 @@ income, and any notable items. Do not invent data not provided. Label clearly as
 **Response:**
 ```json
 {
-  "reportId": "uuid",
+  "success": true,
   "data": {
+    "reportId": "uuid",
+    "reportType": "profit_and_loss",
+    "clientId": "uuid",
+    "periodStart": "2026-01-01",
+    "periodEnd": "2026-03-31",
     "sections": [...],
     "totals": {...},
-    "validationWarnings": ["Trial balance out of balance by ₱150.00"]
+    "validationWarnings": ["Trial balance out of balance by ₱150.00"],
+    "aiNarrative": "string or null",
+    "aiNarrativeApproved": false,
+    "generatedAt": "ISO 8601"
   },
-  "aiNarrative": "string or null",
-  "generatedAt": "ISO 8601"
+  "meta": {
+    "request_id": "req_abc123",
+    "duration_ms": 3200
+  }
 }
 ```
 
@@ -1266,19 +1296,47 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
 **Response:**
 ```json
 {
-  "recordId": "uuid",
-  "formNumber": "2550Q",
-  "fields": [
-    {
-      "fieldCode": "total_sales",
-      "label": "Total Sales",
-      "value": "1250000.00",
-      "isEditable": true,
-      "isRequired": true,
-      "section": "Part III - Tax Due"
-    }
-  ],
-  "warnings": ["Missing data for field 'exempt_sales' — verify manually"]
+  "success": true,
+  "data": {
+    "recordId": "uuid",
+    "formNumber": "2550Q",
+    "formTitle": "Quarterly VAT Return",
+    "filingPeriod": "Q1-2026",
+    "status": "prefill_complete",
+    "sections": [
+      {
+        "title": "Part I - Background Information",
+        "fields": [
+          {
+            "fieldCode": "tin",
+            "label": "Taxpayer Identification Number",
+            "value": "123-456-789-000",
+            "isEditable": false,
+            "isRequired": true,
+            "mappingType": "client_field"
+          }
+        ]
+      },
+      {
+        "title": "Part III - Tax Due",
+        "fields": [
+          {
+            "fieldCode": "total_sales",
+            "label": "Total Sales / Receipts",
+            "value": "1250000.00",
+            "isEditable": true,
+            "isRequired": true,
+            "mappingType": "sum_account_type"
+          }
+        ]
+      }
+    ],
+    "warnings": ["Missing data for field 'exempt_sales' — verify manually"]
+  },
+  "meta": {
+    "request_id": "req_ghi789",
+    "duration_ms": 1800
+  }
 }
 ```
 
@@ -1297,6 +1355,10 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
 ```
 
 **Technology:** Deno + `@react-pdf/renderer` (React-based PDF layout). HTML templates compiled to PDF server-side for consistent cross-browser output.
+
+**AI Narrative Gate (reports only):** When `type = 'report'`, the function checks `financial_reports.ai_narrative_approved`. If the report has an unapproved AI narrative (`ai_narrative IS NOT NULL AND ai_narrative_approved = false`), the narrative section is **omitted from the PDF** — the report renders without the AI summary. The frontend enforces this via disabled export buttons, but the server-side check is a safety net.
+
+**Deno compatibility note:** `@react-pdf/renderer` runs on Node.js natively. Deno compatibility requires the npm: specifier (`import { renderToStream } from "npm:@react-pdf/renderer"`). If import resolution fails at deploy time, fallback to a minimal Cloud Run service (~$5/month) for PDF rendering. Test during M6 milestone.
 
 **Response:** Returns Supabase Storage URL for the generated PDF. File stored at:
 - Reports: `exports/{client_id}/reports/{report_type}-{period}.pdf`
@@ -1346,6 +1408,7 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
 {
   "name": "string",
   "email": "string",
+  "phone": "string | null",
   "businessName": "string | null",
   "message": "string",
   "website": "string"  // Honeypot field
@@ -1354,8 +1417,8 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
 
 **Flow:**
 1. If `website` field is non-empty, return 200 OK silently (honeypot caught).
-2. Validate: name required, email valid format, message 10–1000 chars.
-3. INSERT into `leads` table with `source = 'website_form'`, `stage = 'lead'`.
+2. Validate: name required, email valid format, phone max 20 chars (optional), message 10–1000 chars.
+3. INSERT into `leads` table with `source = 'website_form'`, `stage = 'lead'`. Phone stored in `contact_phone` if provided.
 4. Return success.
 
 **Response (200):**
@@ -1388,6 +1451,124 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
    c. Surface banner in Toolbox: "Gmail connection lost. Reconnect in Settings."
 
 **Error Handling:** If `watch()` renewal fails but token is valid, retry up to 3 times with 60s intervals. If all fail, set `status = 'error'` and `last_error` with details.
+
+---
+
+#### Edge Function: `connect-gmail`
+
+**Purpose:** Exchange Google OAuth authorization code for tokens, encrypt and store them, and initialize Gmail push notifications.
+
+**Request (from Toolbox Settings page):**
+```json
+{
+  "code": "authorization_code_from_google"
+}
+```
+
+**Authentication:** Requires `admin` role.
+
+**Flow:**
+1. Verify caller has `admin` role.
+2. Exchange `code` for tokens via Google OAuth2 token endpoint.
+3. Fetch Gmail address via `gmail.users.getProfile()`.
+4. Encrypt tokens with AES-256-GCM.
+5. INSERT/UPDATE `gmail_connections` with encrypted tokens, `status = 'active'`.
+6. Call `gmail.users.watch()` with Pub/Sub topic.
+7. Store `watch_history_id` and `watch_expiration`.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "gmailEmail": "accountant@gmail.com",
+    "connectionId": "uuid",
+    "watchExpiration": "ISO 8601",
+    "status": "active"
+  },
+  "meta": { "request_id": "req_abc", "duration_ms": 2200 }
+}
+```
+
+**Timeout:** 15 seconds.
+
+---
+
+#### Edge Function: `draft-email`
+
+**Purpose:** Generate an AI-drafted follow-up email for a client using Claude API.
+
+**Request (from Toolbox client):**
+```json
+{
+  "clientId": "uuid",
+  "templateType": "document_request",
+  "customIntent": null
+}
+```
+
+**Template types:** `document_request`, `deadline_reminder`, `report_delivery`, `custom`.
+
+**Flow:**
+1. Load client profile (business name, industry, contact email).
+2. Load recent interaction context (last emails, pending deadlines, recent documents).
+3. Construct Claude prompt with template type, client context, and optional custom intent.
+4. Generate draft email (subject + body).
+5. Return draft without sending.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "subject": "Reminder: Please send January bank statement",
+    "body": "Hi Juan,\n\nI hope this message finds you well...",
+    "templateType": "document_request",
+    "clientName": "Juan's Bakery"
+  },
+  "meta": { "request_id": "req_draft01", "duration_ms": 2500 }
+}
+```
+
+**Timeout:** 15 seconds.
+
+---
+
+#### Edge Function: `generate-client-deadlines`
+
+**Purpose:** Generate 12 months of BIR and bookkeeping deadlines for a specific client. Called during client onboarding and available for manual re-generation.
+
+**Request:**
+```json
+{
+  "clientId": "uuid"
+}
+```
+
+**Flow:**
+1. Load client's `bir_registration_type` and `fiscal_year_start_month`.
+2. Generate deadlines for the next 12 months based on:
+   - `monthly_bookkeeping` for all clients (15th of following month).
+   - `monthly_vat` only for VAT clients (20th of following month).
+   - `quarterly_bir` and `quarterly_financials` per BIR schedule.
+   - `annual_itr` and `annual_financials` (April 15).
+3. INSERT with `ON CONFLICT (client_id, deadline_type, period_label) DO NOTHING` — idempotent.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "deadlinesCreated": 18,
+    "deadlinesSkipped": 0,
+    "clientId": "uuid",
+    "periodCovered": "2026-04 to 2027-03"
+  },
+  "meta": { "request_id": "req_dl01", "duration_ms": 450 }
+}
+```
+
+**Timeout:** 10 seconds.
 
 ---
 
@@ -1941,6 +2122,18 @@ accounting-service/
 │   │   ├── export-sheets/
 │   │   │   └── index.ts
 │   │   ├── handle-contact-form/
+│   │   │   └── index.ts
+│   │   ├── connect-gmail/
+│   │   │   └── index.ts
+│   │   ├── draft-email/
+│   │   │   └── index.ts
+│   │   ├── generate-client-deadlines/
+│   │   │   └── index.ts
+│   │   ├── send-invoice/
+│   │   │   └── index.ts
+│   │   ├── send-email/
+│   │   │   └── index.ts
+│   │   ├── suggest-category/
 │   │   │   └── index.ts
 │   │   ├── cron-gmail-watch/
 │   │   │   └── index.ts
