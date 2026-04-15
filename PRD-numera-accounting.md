@@ -645,7 +645,7 @@ Numera is a web-based accounting service platform built for a two-person Philipp
 - **Entry point:** "Send Us a Message" CTA or "Contact" nav link.
 - **Steps:**
   1. Prospect views contact form section.
-  2. Fills in Name (required), Email (required), Business Name (optional), Message (required).
+  2. Fills in Name (required), Email (required), Phone (optional), Business Name (optional), Message (required).
   3. Clicks "Send Message."
   4. Client-side validation runs. Errors shown inline if fields fail.
   5. Validation passes: button → "Sending…" + spinner.
@@ -1067,6 +1067,7 @@ interface FinancialReport {
   periodEnd: string;
   generatedAt: string;
   generatedBy: string;               // User ID
+  aiNarrative?: string;              // AI-generated narrative text (null if not yet generated)
   aiNarrativeApproved: boolean;
   exportedPdfPath?: string;           // Supabase Storage path (signed URL resolved on access)
   createdAt: string;

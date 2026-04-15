@@ -540,7 +540,7 @@ All touch targets: 44px x 44px minimum.
 1. **Sidebar** (64px collapsed, Workdesk active)
 
 2. **Left Panel** (~30%): Report selection.
-   - Report Type dropdown: P&L, Balance Sheet, Cash Flow, Bank Reconciliation, AR Aging, AP Aging, General Ledger, Trial Balance
+   - Report Type dropdown: P&L, Balance Sheet, Cash Flow, Bank Reconciliation, AR Ageing, AP Ageing, General Ledger, Trial Balance
    - Client dropdown
    - Period dropdown: presets (This Month, Last Month, This Quarter, Last Quarter, This Year) + Custom date range
    - "Generate" button (`teal-600`)

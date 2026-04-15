@@ -79,6 +79,7 @@ graph TB
             EF_CONTACT["handle-contact-form<br/>Lead creation"]
             EF_CRON["cron-gmail-watch<br/>Renew Gmail watch()"]
             EF_DEADLINES["cron-generate-deadlines<br/>Annual deadline refresh"]
+            EF_CHECK_DL["cron-check-approaching-deadlines<br/>Daily deadline check + auto-draft"]
             EF_CONNECT["connect-gmail<br/>OAuth token exchange"]
             EF_DRAFT["draft-email<br/>AI email drafting"]
             EF_SEND_INV["send-invoice<br/>PDF + Gmail send"]
@@ -350,6 +351,48 @@ Immutable audit trail for lead stage changes and edits.
 
 **RLS Policy:** All authenticated users can SELECT. INSERT via trigger/Edge Function only.
 
+**Trigger DDL (migration 014):**
+
+```sql
+-- Log lead creation
+CREATE OR REPLACE FUNCTION fn_log_lead_created()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO lead_activity_log (lead_id, action, details, performed_by)
+  VALUES (NEW.id, 'created', jsonb_build_object('stage', NEW.stage), NEW.created_by);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_lead_created
+  AFTER INSERT ON leads
+  FOR EACH ROW EXECUTE FUNCTION fn_log_lead_created();
+
+-- Log lead stage changes and field updates
+CREATE OR REPLACE FUNCTION fn_log_lead_updated()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.stage IS DISTINCT FROM NEW.stage THEN
+    INSERT INTO lead_activity_log (lead_id, action, details)
+    VALUES (NEW.id, 'stage_changed', jsonb_build_object('from', OLD.stage, 'to', NEW.stage));
+  ELSIF OLD.notes IS DISTINCT FROM NEW.notes THEN
+    INSERT INTO lead_activity_log (lead_id, action, details)
+    VALUES (NEW.id, 'notes_updated', jsonb_build_object('updated_field', 'notes'));
+  ELSIF OLD.close_reason IS DISTINCT FROM NEW.close_reason THEN
+    INSERT INTO lead_activity_log (lead_id, action, details)
+    VALUES (NEW.id, 'close_reason_set', jsonb_build_object('reason', NEW.close_reason));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_lead_updated
+  AFTER UPDATE ON leads
+  FOR EACH ROW EXECUTE FUNCTION fn_log_lead_updated();
+```
+
+**Note:** `performed_by` is set for `created` action (from `leads.created_by`). For UPDATE triggers, `performed_by` is NULL (system-level) — the Edge Function or frontend sets it explicitly when calling via RPC if attribution is needed.
+
 ---
 
 ##### Table: `clients`
@@ -380,6 +423,28 @@ Active clients converted from leads.
 - `idx_clients_business_name` ON `clients(business_name)` — search
 
 **RLS Policy:** All authenticated users can CRUD all clients.
+
+---
+
+##### Table: `client_activity_log`
+
+Immutable audit trail for client-related actions (emails sent, documents processed, status changes).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `uuid` | PK, DEFAULT `gen_random_uuid()` | |
+| `client_id` | `uuid` | NOT NULL, FK → `clients.id` ON DELETE CASCADE | |
+| `action` | `text` | NOT NULL | e.g., 'email_sent', 'document_processed', 'status_changed', 'report_generated' |
+| `details` | `jsonb` | | e.g., `{"subject": "...", "recipient": "...", "template_type": "deadline_reminder"}` |
+| `performed_by` | `uuid` | FK → `users.id` | NULL for system actions |
+| `created_at` | `timestamptz` | NOT NULL, DEFAULT `now()` | |
+
+**Indexes:**
+- `idx_client_activity_client_id` ON `client_activity_log(client_id, created_at DESC)` — activity timeline per client
+
+**RLS Policy:** All authenticated users can SELECT. INSERT via trigger/Edge Function only.
+
+**Usage by `send-email`:** When the `send-email` Edge Function successfully sends an email, it inserts a row with `action = 'email_sent'` and `details` containing `subject`, `recipient`, `template_type`, and `draft_email_id` (if originated from a draft).
 
 ---
 
@@ -898,9 +963,10 @@ Migrations managed via Supabase CLI (`supabase migration new`, `supabase db push
 11. `011_create_bir_templates.sql` — bir_form_templates + bir_form_field_mappings + bir_tax_form_records
 12. `012_create_system_settings.sql` — system_settings + seed data
 13. `013_create_rls_policies.sql` — all RLS policies
-14. `014_create_triggers.sql` — updated_at triggers, lead activity log triggers
-15. `015_seed_chart_of_accounts.sql` — full chart of accounts
-16. `016_seed_bir_templates.sql` — initial BIR form templates and field mappings
+14. `014_create_triggers.sql` — updated_at triggers, lead activity log triggers, client activity log triggers
+15. `015_create_draft_emails.sql` — draft_emails table for auto-generated email drafts
+16. `016_seed_chart_of_accounts.sql` — full chart of accounts
+17. `017_seed_bir_templates.sql` — initial BIR form templates and field mappings
 
 **Backward compatibility:** All migrations are additive. No destructive operations (DROP COLUMN, DROP TABLE) in v1. Schema changes in v1.x will use additive migrations with application-level backward compatibility.
 
@@ -1358,7 +1424,7 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
 
 **AI Narrative Gate (reports only):** When `type = 'report'`, the function checks `financial_reports.ai_narrative_approved`. If the report has an unapproved AI narrative (`ai_narrative IS NOT NULL AND ai_narrative_approved = false`), the narrative section is **omitted from the PDF** — the report renders without the AI summary. The frontend enforces this via disabled export buttons, but the server-side check is a safety net.
 
-**Deno compatibility note:** `@react-pdf/renderer` runs on Node.js natively. Deno compatibility requires the npm: specifier (`import { renderToStream } from "npm:@react-pdf/renderer"`). If import resolution fails at deploy time, fallback to a minimal Cloud Run service (~$5/month) for PDF rendering. Test during M6 milestone.
+**Deno compatibility note:** `@react-pdf/renderer` runs on Node.js natively. Deno compatibility requires the npm: specifier (`import { renderToStream } from "npm:@react-pdf/renderer"`). If import resolution fails at deploy time, fallback to a minimal Cloud Run service (~$5/month) for PDF rendering. Test during M1 milestone (architecture spike) — PDF generation is required for invoices, BIR forms, and financial reports, so compatibility must be validated early to avoid rework on PDF-dependent features.
 
 **Response:** Returns Supabase Storage URL for the generated PDF. File stored at:
 - Reports: `exports/{client_id}/reports/{report_type}-{period}.pdf`
@@ -1584,6 +1650,53 @@ Field formulas can reference other fields (e.g., `tax_due = field:taxable_base *
    - `bir_registration_type` determines which deadline types apply (e.g., `monthly_vat` only for VAT clients).
    - `fiscal_year_start_month` determines quarterly/annual period boundaries.
 3. INSERT with `ON CONFLICT (client_id, deadline_type, period_label) DO NOTHING` — idempotent.
+
+---
+
+#### Edge Function: `cron-check-approaching-deadlines`
+
+**Purpose:** Daily check for approaching deadlines. Auto-generates follow-up email drafts for clients with deliverables not yet received.
+
+**Schedule:** Daily at 08:00 PHT (via pg_cron).
+
+**Flow:**
+1. Query `deadlines` WHERE `due_date <= now() + INTERVAL '3 days'` AND `due_date >= now()` AND `status != 'completed'`.
+2. For each approaching deadline:
+   a. Check whether the associated deliverable has been received — heuristic: query `email_notifications` for the client within the relevant period (`deadline.period_label`). If a matching document exists, skip.
+   b. Check `draft_emails` for an existing draft matching `(client_id, deadline_id)` to avoid duplicates.
+   c. If no deliverable received and no draft exists, invoke `draft-email` Edge Function with `templateType: 'deadline_reminder'` and `clientId`.
+   d. Store the generated draft in `draft_emails` table with `status = 'pending_review'`.
+3. For deadlines within 7 days (`due_date <= now() + INTERVAL '7 days'`), upsert a record into `deadline_notifications` for the in-app banner display.
+4. Log summary: `{deadlinesChecked, draftsGenerated, draftsSkipped, notificationsCreated}`.
+
+**Idempotency:** Draft generation checks `draft_emails(client_id, deadline_id)` before creating. Running multiple times per day produces no duplicates.
+
+**Timeout:** 30 seconds.
+
+---
+
+#### Table: `draft_emails`
+
+Stores auto-generated email drafts for accountant review before sending.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `uuid` | PK, DEFAULT `gen_random_uuid()` | |
+| `client_id` | `uuid` | NOT NULL, FK → `clients.id` ON DELETE CASCADE | |
+| `deadline_id` | `uuid` | FK → `deadlines.id` ON DELETE SET NULL | Associated deadline (NULL for manual drafts) |
+| `template_type` | `text` | NOT NULL | `deadline_reminder`, `document_request`, `report_delivery`, `custom` |
+| `subject` | `text` | NOT NULL | Generated email subject |
+| `body` | `text` | NOT NULL | Generated email body |
+| `status` | `text` | NOT NULL, DEFAULT 'pending_review', CHECK (`status` IN ('pending_review', 'approved', 'sent', 'discarded')) | |
+| `reviewed_by` | `uuid` | FK → `users.id` | User who approved/discarded |
+| `sent_at` | `timestamptz` | | Timestamp when email was sent |
+| `created_at` | `timestamptz` | NOT NULL, DEFAULT `now()` | |
+
+**Indexes:**
+- `idx_draft_emails_client_deadline` ON `draft_emails(client_id, deadline_id)` — idempotency check
+- `idx_draft_emails_status` ON `draft_emails(status)` — filter pending drafts for review queue
+
+**RLS Policy:** All authenticated users can SELECT/UPDATE. INSERT via Edge Function only.
 
 ---
 
@@ -2137,7 +2250,9 @@ accounting-service/
 │   │   │   └── index.ts
 │   │   ├── cron-gmail-watch/
 │   │   │   └── index.ts
-│   │   └── cron-generate-deadlines/
+│   │   ├── cron-generate-deadlines/
+│   │   │   └── index.ts
+│   │   └── cron-check-approaching-deadlines/
 │   │       └── index.ts
 │   └── seed.sql                      # Dev seed data
 │

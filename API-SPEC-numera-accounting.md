@@ -56,6 +56,7 @@ This API specification defines the contracts between Numera's frontend applicati
 | `categorize-transaction` | Service role key (internal) | Called by `process-document` only |
 | `cron-gmail-watch` | Service role key (cron) | Supabase pg_cron |
 | `cron-generate-deadlines` | Service role key (cron) | Supabase pg_cron |
+| `cron-check-approaching-deadlines` | Service role key (cron) | Supabase pg_cron — daily 08:00 PHT |
 
 ### 2.2 Supabase Auth JWT
 
@@ -794,7 +795,7 @@ const { data, error } = await supabase.functions.invoke('prefill-bir-form', {
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `clientId` | `string (uuid)` | Yes | Client to generate form for |
-| `formNumber` | `string` | Yes | BIR form number (e.g., `2550Q`, `2551Q`, `1701`, `1701Q`, `1702`, `1702Q`) |
+| `formNumber` | `string` | Yes | BIR form number. Supported forms: `2551Q`, `2550M`, `2550Q`, `1701`, `1701Q`, `1702`, `1702Q`, `1601-C`, `1601-EQ`, `0619-E`, `0619-F` |
 | `filingPeriod` | `string` | Yes | Filing period identifier. Format: `Q{1-4}-YYYY` for quarterly, `YYYY-MM` for monthly, `YYYY` for annual |
 
 **Filing period to date range mapping:** The Edge Function resolves `filingPeriod` to concrete dates internally:
@@ -1575,6 +1576,21 @@ These functions are invoked server-side by other Edge Functions. They use the Su
 **Schedule:** January 1 each year.
 
 **Flow:** Generate 12 months of BIR and bookkeeping deadlines for all active clients. Idempotent via `ON CONFLICT DO NOTHING` on the unique index `(client_id, deadline_type, period_label)`.
+
+---
+
+#### `cron-check-approaching-deadlines`
+
+**Schedule:** Daily at 08:00 PHT.
+
+**Flow:**
+1. Query `deadlines` approaching within 3 days (`due_date <= now() + 3 days`, `status != 'completed'`).
+2. For each, check if deliverable received (heuristic: matching `email_notifications` from client in the period).
+3. If not received and no existing draft in `draft_emails(client_id, deadline_id)`, invoke `draft-email` with `templateType: 'deadline_reminder'`.
+4. Store draft in `draft_emails` with `status = 'pending_review'`.
+5. For deadlines within 7 days, upsert into `deadline_notifications` for in-app banner.
+
+**Idempotency:** Checks `draft_emails` before generating — safe to run multiple times per day.
 
 ---
 
