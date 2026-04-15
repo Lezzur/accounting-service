@@ -101,5 +101,6 @@ export {
   dismissEmailSchema,
   connectGmailSchema,
   extractDocumentSchema,
+  renderPdfSchema,
   exportToSheetsSchema,
 } from './schemas.js';

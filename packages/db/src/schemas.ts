@@ -337,6 +337,12 @@ export const extractDocumentSchema = z.object({
   emailNotificationId: uuidSchema,
 });
 
+/** PDF rendering */
+export const renderPdfSchema = z.object({
+  type: z.enum(['report', 'bir_form', 'invoice']),
+  id: uuidSchema,
+});
+
 /** Google Sheets export */
 export const exportToSheetsSchema = z
   .object({
