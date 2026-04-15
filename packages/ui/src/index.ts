@@ -87,6 +87,23 @@ export {
   DropdownMenuRadioGroup,
 } from "./components/dropdown-menu";
 
+export { Checkbox } from "./components/checkbox";
+
+export { DataTable, getSelectionColumn } from "./components/data-table";
+export type {
+  DataTableProps,
+  DataTableEditEvent,
+  ColumnDef,
+  SortingState,
+  RowSelectionState,
+} from "./components/data-table";
+
+export { DataTableToolbar } from "./components/data-table-toolbar";
+export type {
+  DataTableToolbarProps,
+  FilterChip,
+} from "./components/data-table-toolbar";
+
 export { cn } from "./lib/utils";
 
 export { SkipToContent } from "./components/skip-to-content";
