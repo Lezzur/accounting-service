@@ -24,9 +24,9 @@
 | 10 | Deadline Tracker | `ab5d3bf5efb444b88bf89f2d4b874235` | Desktop | Calendar + list view with status indicators | Complete |
 | 11 | Client Profile | `7fd819b136c84481bd788707d27df100` | Desktop | CRM client record with onboarding data | Complete |
 | 12 | Invoice Creation | `3771e48bcdf3413292ef3136e97280fe` | Desktop | Line-item invoice form with VAT calculation | Complete |
-| 13 | Task Tracker | — | Desktop | CRM task list with filters, due dates, and linked entities | Specified (no Stitch screen) |
-| 14 | Follow-up Email Drafting | — | Desktop | AI email drafting modal/drawer within client context | Specified (no Stitch screen) |
-| 15 | Settings Page | — | Desktop | Admin-only Gmail connection and system settings | Specified (no Stitch screen) |
+| 13 | Task Tracker | `9d538225bc144d1b93771b75138b6766` | Desktop | CRM task list with filters, due dates, and linked entities | Complete |
+| 14 | Follow-up Email Drafting | `b4719e632ca447e6ba0fea38a477f854` | Desktop | AI email drafting modal/drawer within client context | Complete |
+| 15 | Settings Page | `5fff9ee279da41b382523ddbddc681cf` | Desktop | Admin-only Gmail connection and system settings | Complete |
 
 ---
 
@@ -725,7 +725,7 @@ The export button is intentionally disabled until narrative is approved. To prev
 
 ## Screen 13: Task Tracker
 
-**Stitch ID:** — (no Stitch screen; specified for developer implementation)
+**Stitch ID:** `9d538225bc144d1b93771b75138b6766`
 **Priority:** Medium — supports accountant daily workflow in CRM.
 
 ### Layout Structure
@@ -784,7 +784,7 @@ The export button is intentionally disabled until narrative is approved. To prev
 
 ## Screen 14: Follow-up Email Drafting
 
-**Stitch ID:** — (no Stitch screen; specified for developer implementation)
+**Stitch ID:** `b4719e632ca447e6ba0fea38a477f854`
 **Priority:** Medium — AI-assisted email composition accessed from Client Profile and Workdesk.
 
 ### Layout Structure
@@ -835,7 +835,7 @@ This screen is implemented as a **drawer** (480px, right-side) accessible from:
 
 ## Screen 15: Settings Page
 
-**Stitch ID:** — (no Stitch screen; specified for developer implementation)
+**Stitch ID:** `5fff9ee279da41b382523ddbddc681cf`
 **Priority:** Low — admin-only, used infrequently.
 
 ### Layout Structure
