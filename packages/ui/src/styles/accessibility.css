@@ -1,0 +1,103 @@
+/* accessibility.css — WCAG 2.1 AA foundational styles for @numera/ui */
+
+/* ─── Focus Ring ─────────────────────────────────────────────────────────── */
+
+/**
+ * .focus-ring — apply to any interactive element that needs an explicit
+ * 2px teal-600 outline per the design spec.
+ */
+.focus-ring {
+  outline: 2px solid #0d9488; /* teal-600 */
+  outline-offset: 2px;
+}
+
+/**
+ * Tailwind-compatible focus-visible utilities.
+ * Applied via @layer utilities so they participate in Tailwind's JIT scan.
+ * Use class="focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
+ * on interactive elements as an alternative to .focus-ring when using
+ * Tailwind class composition.
+ */
+@layer utilities {
+  .focus-ring-tailwind:focus-visible {
+    --tw-ring-color: #0d9488; /* teal-600 */
+    --tw-ring-offset-width: 2px;
+    --tw-ring-width: 2px;
+    box-shadow:
+      0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color, #fff),
+      0 0 0 calc(var(--tw-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Tabular Numbers ────────────────────────────────────────────────────── */
+
+/**
+ * .tabular-nums — forces monospaced digit widths so numeric columns in
+ * data grids and financial tables don't shift as values change.
+ */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Reduced Motion ─────────────────────────────────────────────────────── */
+
+/**
+ * Global reset: when the user has requested reduced motion, strip all
+ * transitions and animations site-wide.  Animations that convey meaning
+ * (e.g. a loading spinner) should swap to a static equivalent via the
+ * .skeleton rule below.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Skeleton / Loading Placeholder ────────────────────────────────────── */
+
+/**
+ * .skeleton — pulsing shimmer under normal motion; flat slate-100 under
+ * reduced-motion (no shimmer animation).
+ */
+.skeleton {
+  background-color: #f1f5f9; /* slate-100 */
+  border-radius: 0.25rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Under reduced-motion: remove the shimmer pseudo-element entirely */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    display: none;
+  }
+}
