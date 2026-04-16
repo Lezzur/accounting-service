@@ -1,6 +1,6 @@
 // @numera/db — Supabase client, TypeScript types, and Zod validation schemas
 
-export { createClient, createBrowserClient, createServiceClient } from './client.js';
+export { createClient, createBrowserClient, createServiceClient } from './client';
 
 export type {
   Database,
@@ -44,7 +44,7 @@ export type {
   GmailConnectionStatus,
   BIRFieldMappingType,
   DraftEmailStatus,
-} from './types.js';
+} from './types';
 
 export {
   // Primitive schemas
@@ -103,4 +103,4 @@ export {
   extractDocumentSchema,
   renderPdfSchema,
   exportToSheetsSchema,
-} from './schemas.js';
+} from './schemas';

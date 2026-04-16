@@ -2,7 +2,7 @@ import {
   createClient as createSupabaseClient,
   type SupabaseClient,
 } from '@supabase/supabase-js';
-import type { Database } from './types.js';
+import type { Database } from './types';
 
 /**
  * Creates an anon-key Supabase client for use in the Toolbox frontend

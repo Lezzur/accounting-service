@@ -1,0 +1,120 @@
+{
+  "pages": {
+    "/_not-found/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/app/_not-found/page-082f4005a13f9185.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/css/c609b3f911da9caf.css",
+      "static/chunks/app/layout-af1e59f9b31f94cf.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/229326bd-05c8758c0a2ade86.js",
+      "static/chunks/835-bc01c42adc1a96fa.js",
+      "static/chunks/233-1c4673241e0ade81.js",
+      "static/chunks/188-bc16885641715a43.js",
+      "static/chunks/620-238d4b328109885d.js",
+      "static/chunks/app/login/page-e4dd54522f7e43c3.js"
+    ],
+    "/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/app/page-743c799d7977099f.js"
+    ],
+    "/(toolbox)/crm/invoices/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/app/(toolbox)/crm/invoices/page-a898f39be22fa9b0.js"
+    ],
+    "/(toolbox)/layout": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/835-bc01c42adc1a96fa.js",
+      "static/chunks/851-0f7bf3165ccd74d6.js",
+      "static/chunks/620-238d4b328109885d.js",
+      "static/chunks/app/(toolbox)/layout-bae0b938aa1eeafd.js"
+    ],
+    "/(toolbox)/workdesk/deadlines/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/app/(toolbox)/workdesk/deadlines/page-6179a08db52b4b03.js"
+    ],
+    "/(toolbox)/crm/clients/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/835-bc01c42adc1a96fa.js",
+      "static/chunks/620-238d4b328109885d.js",
+      "static/chunks/app/(toolbox)/crm/clients/page-29ce7719e1a4dc07.js"
+    ],
+    "/(toolbox)/crm/pipeline/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/app/(toolbox)/crm/pipeline/page-412300f95053d002.js"
+    ],
+    "/(toolbox)/workdesk/tax-prep/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/app/(toolbox)/workdesk/tax-prep/page-70a0888ac4852a56.js"
+    ],
+    "/(toolbox)/crm/tasks/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/229326bd-05c8758c0a2ade86.js",
+      "static/chunks/835-bc01c42adc1a96fa.js",
+      "static/chunks/233-1c4673241e0ade81.js",
+      "static/chunks/511-0e699841b0cf1521.js",
+      "static/chunks/620-238d4b328109885d.js",
+      "static/chunks/app/(toolbox)/crm/tasks/page-f1845c32925ba6de.js"
+    ],
+    "/(toolbox)/workdesk/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/229326bd-05c8758c0a2ade86.js",
+      "static/chunks/835-bc01c42adc1a96fa.js",
+      "static/chunks/233-1c4673241e0ade81.js",
+      "static/chunks/511-0e699841b0cf1521.js",
+      "static/chunks/620-238d4b328109885d.js",
+      "static/chunks/app/(toolbox)/workdesk/page-6837ab240e19bd84.js"
+    ],
+    "/(toolbox)/workdesk/reports/page": [
+      "static/chunks/webpack-1e3bd529ef341ac4.js",
+      "static/chunks/5b8f0dd8-b7a3310d32120eee.js",
+      "static/chunks/749-b2be3f0edf414699.js",
+      "static/chunks/main-app-fd8ad782752e5b59.js",
+      "static/chunks/229326bd-05c8758c0a2ade86.js",
+      "static/chunks/835-bc01c42adc1a96fa.js",
+      "static/chunks/233-1c4673241e0ade81.js",
+      "static/chunks/620-238d4b328109885d.js",
+      "static/chunks/app/(toolbox)/workdesk/reports/page-186a6d725f2badcc.js"
+    ]
+  }
+}

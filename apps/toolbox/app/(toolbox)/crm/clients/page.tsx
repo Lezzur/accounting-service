@@ -12,7 +12,8 @@ import {
   Users,
 } from 'lucide-react';
 import type { BusinessType, BIRRegistrationType } from '@numera/db';
-import { fetchClientsAction, PAGE_SIZE } from './actions';
+import { fetchClientsAction } from './actions';
+import { PAGE_SIZE } from './constants';
 import type { ClientRow, SortColumn, SortDirection } from './actions';
 
 // ─── Constants ───────────────────────────────────────────────────────────────

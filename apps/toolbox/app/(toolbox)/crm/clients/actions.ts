@@ -2,6 +2,7 @@
 
 import { createClient } from '@numera/db';
 import type { BusinessType, BIRRegistrationType } from '@numera/db';
+import { PAGE_SIZE } from './constants';
 
 export type SortColumn =
   | 'businessName'
@@ -30,8 +31,6 @@ export interface FetchClientsParams {
   page: number;
 }
 
-export const PAGE_SIZE = 50;
-
 const DB_SORT_COLUMNS: Record<Exclude<SortColumn, 'nextDeadline'>, string> = {
   businessName: 'business_name',
   businessType: 'business_type',
@@ -45,7 +44,6 @@ export async function fetchClientsAction(
   const { search, businessType, birType, sortColumn, sortDir, page } = params;
   const supabase = createClient();
 
-  // eslint-disable-next-line prefer-const
   let query = supabase
     .from('clients')
     .select('id, business_name, business_type, bir_registration_type, status', {
@@ -53,29 +51,23 @@ export async function fetchClientsAction(
     });
 
   if (search) {
-    // @ts-expect-error — Supabase filter builder type is reassignable
     query = query.ilike('business_name', `%${search}%`);
   }
   if (businessType) {
-    // @ts-expect-error — Supabase filter builder type is reassignable
     query = query.eq('business_type', businessType);
   }
   if (birType) {
-    // @ts-expect-error — Supabase filter builder type is reassignable
     query = query.eq('bir_registration_type', birType);
   }
 
   if (sortColumn !== 'nextDeadline') {
-    // @ts-expect-error — Supabase filter builder type is reassignable
     query = query.order(DB_SORT_COLUMNS[sortColumn], { ascending: sortDir === 'asc' });
   } else {
-    // @ts-expect-error — Supabase filter builder type is reassignable
     query = query.order('business_name', { ascending: true });
   }
 
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
-  // @ts-expect-error — Supabase filter builder type is reassignable
   query = query.range(from, to);
 
   const { data, count, error } = await query;

@@ -1,0 +1,23 @@
+
+> @numera/toolbox@0.1.0 build F:\claude-code\claude_projects\accounting-service\apps\toolbox
+> next build
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/(toolbox)/crm/tasks/components/new-task-drawer.tsx:120:46
+Type error: Property 'id' does not exist on type 'never'.
+
+[0m [90m 118 |[39m             [33m.[39morder([32m"business_name"[39m)[33m;[39m[0m
+[0m [90m 119 |[39m           setEntityOptions([0m
+[0m[31m[1m>[22m[39m[90m 120 |[39m             (data [33m?[39m[33m?[39m [])[33m.[39mmap((r) [33m=>[39m ({ id[33m:[39m r[33m.[39mid[33m,[39m name[33m:[39m r[33m.[39mbusiness_name }))[0m
+[0m [90m     |[39m                                              [31m[1m^[22m[39m[0m
+[0m [90m 121 |[39m           )[33m;[39m[0m
+[0m [90m 122 |[39m         } [36melse[39m {[0m
+[0m [90m 123 |[39m           [36mconst[39m { data } [33m=[39m [36mawait[39m supabase[0m
+Next.js build worker exited with code: 1 and signal: null
+ ELIFECYCLE  Command failed with exit code 1.

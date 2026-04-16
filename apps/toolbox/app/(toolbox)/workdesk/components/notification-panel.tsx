@@ -12,7 +12,7 @@ import {
 } from "@numera/ui";
 import { createBrowserClient } from "@numera/db";
 import type { DocumentTypeGuess } from "@numera/db";
-import { useNotificationCount } from "../../../components/notification-count-context";
+import { useNotificationCount } from "../../components/notification-count-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

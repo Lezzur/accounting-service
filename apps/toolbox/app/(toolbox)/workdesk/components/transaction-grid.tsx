@@ -166,7 +166,11 @@ function groupCategories(categories: CategoryOption[]) {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function TransactionGrid() {
+type TransactionGridProps = {
+  onDocPreview?: (notificationId: string) => void;
+};
+
+export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
   // ── Supabase client ──
   const supabaseRef = useRef<ReturnType<typeof createBrowserClient> | null>(null);
   if (supabaseRef.current === null) {
@@ -1018,7 +1022,9 @@ export function TransactionGrid() {
               title={row.original.source_email?.subject ?? "View source document"}
               onClick={(e) => {
                 e.stopPropagation();
-                // Document preview panel integration point
+                if (onDocPreview && row.original.source_email_notification_id) {
+                  onDocPreview(row.original.source_email_notification_id);
+                }
               }}
             >
               <FileText size={16} />
@@ -1075,7 +1081,7 @@ export function TransactionGrid() {
         },
       },
     ],
-    [approveTransaction, openRejectDialog, suggestCategory, suggestingCategoryFor],
+    [approveTransaction, openRejectDialog, suggestCategory, suggestingCategoryFor, onDocPreview],
   );
 
   // ── Derived ──
