@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { createClient } from "@numera/db";
+import { createClient } from "../../../../lib/supabase/client";
 import type { Database, TaskPriority, TaskStatus } from "@numera/db";
 import {
   Button,

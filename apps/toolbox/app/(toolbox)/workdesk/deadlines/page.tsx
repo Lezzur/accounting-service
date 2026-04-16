@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { createClient } from "@numera/db";
+import { createClient } from "../../../../lib/supabase/client";
 import type { Database, DeadlineType, DeadlineStatus } from "@numera/db";
 import {
   Button,

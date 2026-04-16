@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { createClient } from "@numera/db";
+import { createClient } from "../../../../../lib/supabase/client";
 import type { Database, TaskPriority, TaskStatus } from "@numera/db";
 import {
   Drawer,

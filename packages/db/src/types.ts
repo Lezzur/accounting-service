@@ -4,7 +4,7 @@
 
 export type UserRole = 'admin' | 'accountant';
 
-export type LeadSource = 'website_form' | 'cal_booking' | 'referral' | 'manual';
+export type LeadSource = 'website_form' | 'cal_booking' | 'referral' | 'manual' | 'google' | 'facebook';
 
 export type LeadStage =
   | 'lead'
@@ -155,6 +155,9 @@ export interface Client {
   gmailAddress: string;
   monthlyRevenueBracket: RevenueBracket;
   googleSheetFolderUrl?: string;
+  contactName?: string;
+  contactPhone?: string;
+  businessPhone?: string;
   status: ClientStatus;
   convertedFromLeadId?: string;
   createdAt: string;
@@ -402,6 +405,9 @@ export interface Database {
           gmail_address: string;
           monthly_revenue_bracket: RevenueBracket;
           google_sheet_folder_url: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          business_phone: string | null;
           status: ClientStatus;
           converted_from_lead_id: string | null;
           created_at: string;
@@ -419,6 +425,9 @@ export interface Database {
           gmail_address: string;
           monthly_revenue_bracket: RevenueBracket;
           google_sheet_folder_url?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          business_phone?: string | null;
           status?: ClientStatus;
           converted_from_lead_id?: string | null;
           created_at?: string;
@@ -436,6 +445,9 @@ export interface Database {
           gmail_address?: string;
           monthly_revenue_bracket?: RevenueBracket;
           google_sheet_folder_url?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          business_phone?: string | null;
           status?: ClientStatus;
           converted_from_lead_id?: string | null;
           created_at?: string;

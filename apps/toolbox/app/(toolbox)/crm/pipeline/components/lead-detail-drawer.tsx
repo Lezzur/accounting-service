@@ -61,6 +61,8 @@ const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
   cal_booking:  "Cal.com Booking",
   referral:     "Referral",
   manual:       "Manual",
+  google:       "Google",
+  facebook:     "Facebook",
 };
 
 const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
@@ -73,7 +75,7 @@ const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   closed_lost:   "Closed Lost",
 };
 
-const LEAD_SOURCES: LeadSource[] = ["website_form", "cal_booking", "referral", "manual"];
+const LEAD_SOURCES: LeadSource[] = ["website_form", "cal_booking", "referral", "manual", "google", "facebook"];
 const LEAD_STAGES: LeadStage[]   = [
   "lead", "contacted", "call_booked", "proposal_sent",
   "negotiation", "closed_won", "closed_lost",

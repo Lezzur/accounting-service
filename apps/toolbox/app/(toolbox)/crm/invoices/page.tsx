@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@numera/db';
+import { createClient } from '../../../../lib/supabase/client';
 import {
   Badge,
   Button,
@@ -254,7 +254,8 @@ export default function InvoicesPage() {
                         return (
                           <tr
                             key={invoice.id}
-                            className="hover:bg-slate-50 transition-colors duration-75"
+                            className="hover:bg-slate-50 transition-colors duration-75 cursor-pointer"
+                            onClick={() => router.push(`/crm/invoices/${invoice.id}`)}
                           >
                             <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">
                               {invoice.invoice_number}
@@ -319,7 +320,7 @@ export default function InvoicesPage() {
                     const isSentOrOverdue =
                       displayStatus === 'sent' || displayStatus === 'overdue';
                     return (
-                      <div key={invoice.id} className="px-4 py-3 space-y-1">
+                      <div key={invoice.id} className="px-4 py-3 space-y-1 cursor-pointer" onClick={() => router.push(`/crm/invoices/${invoice.id}`)}>
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-medium text-slate-900">
                             {invoice.invoice_number}

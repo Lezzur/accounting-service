@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '../../../../lib/supabase/client';
 import type { Database, Client, FinancialReport, ReportType } from '@numera/db';
 import {
   Select,
@@ -139,14 +139,7 @@ function mapReportRow(
 
 export default function ReportsPage() {
   // ── Supabase client (stable, created once) ──────────────────────────────────
-  const supabase = useMemo(
-    () =>
-      createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      ),
-    [],
-  );
+  const supabase = useMemo(() => createClient(), []);
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [reportType, setReportType] = useState<ReportType | ''>('');

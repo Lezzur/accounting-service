@@ -20,6 +20,11 @@ function corsHeaders(requestOrigin: string | null): Record<string, string> {
   };
 }
 
+const UTM_SOURCE_MAP: Record<string, string> = {
+  google: 'google',
+  facebook: 'facebook',
+};
+
 const ContactFormSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
@@ -27,10 +32,63 @@ const ContactFormSchema = z.object({
   businessName: z.string().max(200).optional(),
   message: z.string().min(10).max(1000),
   website: z.string().optional(),
+  utmSource: z.string().max(50).optional(),
 });
+
+const NOTIFY_EMAIL = 'rocketturtles.creative@gmail.com';
+const RESEND_API_URL = 'https://api.resend.com/emails';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_HOURS = 1;
+
+async function sendNotifications(
+  supabase: ReturnType<typeof createClient>,
+  lead: { name: string; email: string; phone?: string; businessName?: string; message: string; source: string },
+) {
+  const resendKey = Deno.env.get('RESEND_API');
+  const title = `New lead: ${lead.businessName || lead.name}`;
+  const body = [
+    `Name: ${lead.name}`,
+    `Email: ${lead.email}`,
+    lead.phone ? `Phone: ${lead.phone}` : null,
+    lead.businessName ? `Business: ${lead.businessName}` : null,
+    `Source: ${lead.source}`,
+    '',
+    `Message:`,
+    lead.message,
+  ].filter((l) => l !== null).join('\n');
+
+  // In-app notification (fire-and-forget)
+  supabase.from('app_notifications').insert({
+    type: 'new_lead',
+    title,
+    body,
+    metadata: { email: lead.email, source: lead.source },
+  }).then(({ error }) => {
+    if (error) console.error('App notification insert failed:', error);
+  });
+
+  // Email via Resend (fire-and-forget)
+  if (resendKey) {
+    fetch(RESEND_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Numera <onboarding@resend.dev>',
+        to: [NOTIFY_EMAIL],
+        subject: title,
+        text: body,
+      }),
+    }).then((res) => {
+      if (!res.ok) res.text().then((t) => console.error('Resend email failed:', res.status, t));
+    }).catch((err) => {
+      console.error('Resend email error:', err);
+    });
+  }
+}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   const cors = corsHeaders(req.headers.get('origin'));
@@ -56,7 +114,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // Allowlist fields — strip everything else
-  const allowed = ['name', 'email', 'phone', 'businessName', 'message', 'website'];
+  const allowed = ['name', 'email', 'phone', 'businessName', 'message', 'website', 'utmSource'];
   const filtered = Object.fromEntries(
     allowed
       .filter((k) => k in (body as Record<string, unknown>))
@@ -71,7 +129,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  const { name, email, phone, businessName, message, website } = parsed.data;
+  const { name, email, phone, businessName, message, website, utmSource } = parsed.data;
 
   // Honeypot — silently succeed, give bot no signal
   if (website && website.length > 0) {
@@ -133,7 +191,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     contact_email: normalizedEmail,
     contact_phone: phone?.trim() ?? null,
     business_name: businessName?.trim() || name.trim(),
-    source: 'website_form',
+    source: (utmSource && UTM_SOURCE_MAP[utmSource.toLowerCase()]) || 'website_form',
     stage: 'lead',
     created_by: null,
     notes: message.trim(),
@@ -142,10 +200,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (leadError) {
     console.error('Lead insert failed:', leadError);
     return new Response(
-      JSON.stringify({ error: 'INTERNAL_ERROR', debug: leadError }),
+      JSON.stringify({ error: 'INTERNAL_ERROR' }),
       { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
     );
   }
+
+  // Send email + in-app notification (non-blocking)
+  const leadSource = (utmSource && UTM_SOURCE_MAP[utmSource.toLowerCase()]) || 'website_form';
+  sendNotifications(supabase, {
+    name: name.trim(),
+    email: normalizedEmail,
+    phone: phone?.trim(),
+    businessName: businessName?.trim(),
+    message: message.trim(),
+    source: leadSource,
+  });
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -154,7 +223,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch (err) {
     console.error('Unhandled error:', err);
     return new Response(
-      JSON.stringify({ error: 'INTERNAL_ERROR', debug: String(err) }),
+      JSON.stringify({ error: 'INTERNAL_ERROR' }),
       { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
     );
   }

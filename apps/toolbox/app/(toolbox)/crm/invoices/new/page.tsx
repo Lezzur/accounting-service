@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@numera/db';
+import { createClient } from '../../../../../lib/supabase/client';
 import {
   Button,
   Input,

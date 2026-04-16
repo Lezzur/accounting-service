@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://esm.sh/zod@3';
 import { corsHeaders } from '../_shared/cors.ts';
-import { successResponse, errorResponse } from '../_shared/response.ts';
+import { errorResponse } from '../_shared/response.ts';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ const RequestSchema = z.object({
     /^(Q[1-4]-\d{4}|\d{4}-\d{2}|\d{4})$/,
     'Must be Q{1-4}-YYYY, YYYY-MM, or YYYY',
   ),
+  priorYear: z.boolean().optional(),
 });
 
 // ─── Filing period resolution ───────────────────────────────────────────────
@@ -67,6 +68,28 @@ function resolveFilingPeriod(
   }
 
   throw new Error(`Invalid filing period format: ${filingPeriod}`);
+}
+
+function shiftPeriodBackOneYear(filingPeriod: string): { shifted: string; label: string } {
+  const qMatch = filingPeriod.match(QUARTERLY_RE);
+  if (qMatch) {
+    const shifted = `Q${qMatch[1]}-${parseInt(qMatch[2]) - 1}`;
+    return { shifted, label: `Q${qMatch[1]} ${parseInt(qMatch[2]) - 1}` };
+  }
+
+  const mMatch = filingPeriod.match(MONTHLY_RE);
+  if (mMatch) {
+    const shifted = `${parseInt(mMatch[1]) - 1}-${mMatch[2]}`;
+    return { shifted, label: `${mMatch[2]}/${parseInt(mMatch[1]) - 1}` };
+  }
+
+  const aMatch = filingPeriod.match(ANNUAL_RE);
+  if (aMatch) {
+    const shifted = `${parseInt(aMatch[1]) - 1}`;
+    return { shifted, label: `${parseInt(aMatch[1]) - 1}` };
+  }
+
+  return { shifted: filingPeriod, label: filingPeriod };
 }
 
 function lastDayOfMonth(year: number, month: number): string {
@@ -344,44 +367,6 @@ function evaluateFormula(
   return result.toFixed(2);
 }
 
-// ─── Response builder ───────────────────────────────────────────────────────
-
-interface TemplateSection {
-  id: string;
-  title: string;
-}
-
-function buildSectionsResponse(
-  templateLayout: { sections: TemplateSection[] },
-  evaluatedFields: Map<string, EvaluatedField>,
-  mappings: FieldMapping[],
-): Array<{ title: string; fields: EvaluatedField[] }> {
-  const sectionMap = new Map<string, EvaluatedField[]>();
-
-  // Initialize sections from template layout
-  for (const section of templateLayout.sections) {
-    sectionMap.set(section.id, []);
-  }
-
-  // Place fields into their sections, ordered by display_order
-  const sortedMappings = [...mappings].sort((a, b) => a.display_order - b.display_order);
-  for (const mapping of sortedMappings) {
-    const field = evaluatedFields.get(mapping.field_code);
-    if (!field) continue;
-    const sectionId = mapping.section ?? templateLayout.sections[0]?.id;
-    if (sectionId && sectionMap.has(sectionId)) {
-      sectionMap.get(sectionId)!.push(field);
-    }
-  }
-
-  return templateLayout.sections
-    .filter((s) => (sectionMap.get(s.id)?.length ?? 0) > 0)
-    .map((s) => ({
-      title: s.title,
-      fields: sectionMap.get(s.id)!,
-    }));
-}
-
 // ─── Edge Function ──────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -428,7 +413,7 @@ Deno.serve(async (req) => {
       return errorResponse(400, 'VALIDATION_FAILED', 'Request validation failed', requestId, details);
     }
 
-    const { clientId, formNumber, filingPeriod } = parsed.data;
+    const { clientId, formNumber, filingPeriod, priorYear } = parsed.data;
 
     // --- Service client for DB queries ---
     const serviceClient = createClient(
@@ -486,8 +471,15 @@ Deno.serve(async (req) => {
     }
 
     // --- Resolve filing period to date range ---
+    const effectivePeriod = priorYear
+      ? shiftPeriodBackOneYear(filingPeriod).shifted
+      : filingPeriod;
+    const priorYearLabel = priorYear
+      ? shiftPeriodBackOneYear(filingPeriod).label
+      : '';
+
     const { periodStart, periodEnd } = resolveFilingPeriod(
-      filingPeriod,
+      effectivePeriod,
       client.fiscal_year_start_month,
     );
 
@@ -571,9 +563,25 @@ Deno.serve(async (req) => {
     }
 
     // --- Build prefill_data JSON ---
-    const prefillData: Record<string, string | null> = {};
+    const prefillData: Record<string, string> = {};
     for (const [code, val] of resolvedValues) {
       prefillData[code] = val;
+    }
+    for (const [code, field] of evaluatedFields) {
+      if (field.value != null && !(code in prefillData)) {
+        prefillData[code] = field.value;
+      }
+    }
+
+    // --- Prior-year mode: return data only, skip upsert ---
+    if (priorYear) {
+      return new Response(
+        JSON.stringify({ prefillData, periodLabel: priorYearLabel }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     // --- UPSERT bir_tax_form_records ---
@@ -621,21 +629,21 @@ Deno.serve(async (req) => {
       recordId = newRecord.id;
     }
 
-    // --- Build response sections ---
-    const templateLayout = template.template_layout as { sections: TemplateSection[] };
-    const sections = buildSectionsResponse(templateLayout, evaluatedFields, mappings as FieldMapping[]);
-
-    return successResponse(
-      {
+    // --- Return flat response matching frontend PrefillResponse type ---
+    return new Response(
+      JSON.stringify({
         recordId,
         formNumber,
-        formTitle: template.form_title,
+        clientTin: client.tin ?? '',
         filingPeriod,
-        status: 'prefill_complete',
-        sections,
-        warnings,
+        prefillData,
+        warnings: warnings.length > 0 ? warnings : undefined,
+        templateStale: false,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
-      { request_id: requestId, duration_ms: Date.now() - startTime },
     );
   } catch (err) {
     console.error('Unhandled error:', err);

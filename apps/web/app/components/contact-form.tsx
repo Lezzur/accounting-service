@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button, Input } from "@numera/ui";
 import { CheckCircle } from "lucide-react";
 
@@ -49,6 +49,13 @@ export function ContactForm() {
   const [errors, setErrors] = useState<FieldError>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const honeypotRef = useRef<HTMLInputElement>(null);
+  const [utmSource, setUtmSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const src = params.get("utm_source");
+    if (src) setUtmSource(src);
+  }, []);
 
   const messageLen = form.message.length;
   const hasErrors = Object.keys(validate(form)).length > 0;
@@ -93,6 +100,7 @@ export function ContactForm() {
             business_name: form.businessName.trim() || undefined,
             message: form.message.trim(),
             website: honeypotRef.current?.value || undefined,
+            utmSource: utmSource || undefined,
           }),
         }
       );

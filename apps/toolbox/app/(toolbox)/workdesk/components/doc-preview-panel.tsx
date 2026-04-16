@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, ChevronLeft, Download } from "lucide-react";
 import { cn } from "@numera/ui";
-import { createBrowserClient } from "@numera/db";
+import { createClient } from "../../../../lib/supabase/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -262,11 +262,11 @@ export function DocPreviewPanel({
   notificationId,
   onClose,
 }: DocPreviewPanelProps) {
-  const supabaseRef = useRef<ReturnType<typeof createBrowserClient> | null>(
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(
     null,
   );
   if (supabaseRef.current === null) {
-    supabaseRef.current = createBrowserClient();
+    supabaseRef.current = createClient();
   }
   const supabase = supabaseRef.current;
 

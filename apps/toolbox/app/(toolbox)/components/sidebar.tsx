@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Kanban,
@@ -20,7 +20,9 @@ import {
   Briefcase,
 } from "lucide-react";
 import { cn } from "@numera/ui";
+import { createClient } from "../../../lib/supabase/client";
 import { useNotificationCount } from "./notification-count-context";
+import { ThemeToggle } from "../../components/theme-toggle";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,7 +206,15 @@ function ModuleTab({
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { unprocessedCount } = useNotificationCount();
+
+  const handleSignOut = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }, [router]);
 
   // Determine active module from URL
   const activeModule: Module = pathname.startsWith("/crm") ? "crm" : "workdesk";
@@ -331,8 +341,13 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* Bottom: settings, avatar, sign-out, toggle */}
+      {/* Bottom: theme, settings, avatar, sign-out, toggle */}
       <div className="shrink-0 border-t border-slate-200 p-2 space-y-0.5">
+        {/* Theme toggle */}
+        <div className={cn("flex items-center px-3 py-1.5", isCollapsed && "justify-center px-1")}>
+          <ThemeToggle />
+        </div>
+
         {/* Settings */}
         <Link
           href="/settings"
@@ -356,7 +371,19 @@ export function Sidebar() {
             isCollapsed && "justify-center px-2",
           )}
         >
-          <Tooltip label={userInitials} show={isCollapsed}>
+          {isCollapsed ? (
+            <Tooltip label="Sign out" show>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-slate-500 hover:text-slate-900 transition-colors duration-[200ms]"
+                aria-label="Sign out"
+              >
+                <LogOut size={20} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          ) : (
+            <>
             <span
               className={cn(
                 "shrink-0 flex items-center justify-center",
@@ -366,10 +393,9 @@ export function Sidebar() {
             >
               {userInitials}
             </span>
-          </Tooltip>
-          {!isCollapsed && (
             <button
               type="button"
+              onClick={handleSignOut}
               className={cn(
                 "ml-auto flex items-center gap-1 text-xs text-slate-500",
                 "hover:text-slate-900 transition-colors duration-[200ms]",
@@ -379,6 +405,7 @@ export function Sidebar() {
               <LogOut size={14} aria-hidden="true" />
               <span>Sign out</span>
             </button>
+            </>
           )}
         </div>
 

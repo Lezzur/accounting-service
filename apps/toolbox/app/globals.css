@@ -8,19 +8,103 @@
   :root {
     --background: #f8fafc;
     --foreground: #0f172a;
-    --primary: #0d9488;
     --card: #ffffff;
+    --card-foreground: #0f172a;
+    --primary: #0d9488;
+    --primary-foreground: #ffffff;
     --muted: #f1f5f9;
     --muted-foreground: #64748b;
     --border: #e2e8f0;
+    --input-border: #e2e8f0;
     --destructive: #ef4444;
+    --accent: #f1f5f9;
+    --accent-foreground: #0f172a;
+    --ring: #0d9488;
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
     --radius-xl: 12px;
   }
 
+  .dark {
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --card: #1e293b;
+    --card-foreground: #f1f5f9;
+    --primary: #14b8a6;
+    --primary-foreground: #0f172a;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --border: #334155;
+    --input-border: #475569;
+    --destructive: #f87171;
+    --accent: #334155;
+    --accent-foreground: #f1f5f9;
+    --ring: #14b8a6;
+  }
+
   html {
     font-size: 14px;
   }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* ── Dark-mode overrides for components using Tailwind classes directly ─── */
+@layer utilities {
+  /* Cards and panels */
+  .dark .bg-white { background-color: var(--card); }
+  .dark .bg-slate-50 { background-color: #1e293b; }
+  .dark .bg-slate-100 { background-color: #334155; }
+
+  /* Text */
+  .dark .text-slate-900 { color: #f1f5f9; }
+  .dark .text-slate-700 { color: #cbd5e1; }
+  .dark .text-slate-600 { color: #94a3b8; }
+  .dark .text-slate-500 { color: #94a3b8; }
+  .dark .text-slate-400 { color: #64748b; }
+
+  /* Borders */
+  .dark .border-slate-200 { border-color: #334155; }
+  .dark .border-slate-100 { border-color: #1e293b; }
+  .dark .border-slate-300 { border-color: #475569; }
+
+  /* Hover states */
+  .dark .hover\:bg-slate-50:hover { background-color: #334155; }
+  .dark .hover\:bg-slate-100:hover { background-color: #475569; }
+  .dark .hover\:text-slate-900:hover { color: #f1f5f9; }
+  .dark .hover\:text-slate-700:hover { color: #cbd5e1; }
+
+  /* Shadows — subtler in dark mode */
+  .dark .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+  .dark .shadow-sm { box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+  /* Input/select backgrounds */
+  .dark input, .dark textarea, .dark select {
+    background-color: var(--card);
+    color: var(--foreground);
+    border-color: var(--input-border);
+  }
+
+  /* Badge overrides */
+  .dark .bg-teal-100 { background-color: rgba(20,184,166,0.15); }
+  .dark .bg-teal-50 { background-color: rgba(20,184,166,0.1); }
+  .dark .bg-red-50 { background-color: rgba(248,113,113,0.1); }
+  .dark .bg-red-100 { background-color: rgba(248,113,113,0.15); }
+  .dark .bg-amber-100 { background-color: rgba(245,158,11,0.15); }
+  .dark .bg-green-50 { background-color: rgba(34,197,94,0.1); }
+  .dark .bg-green-100 { background-color: rgba(34,197,94,0.15); }
+
+  /* Dark backgrounds that need contrast in dark mode */
+  .dark .bg-slate-900 { background-color: #475569; }
+
+  /* Dividers */
+  .dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
+  .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #334155; }
+
+  /* Skeleton pulse */
+  .dark .bg-slate-200 { background-color: #334155; }
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { X } from "lucide-react";
-import { createClient } from "@numera/db";
+import { createClient } from "../../../lib/supabase/client";
 import {
   Drawer,
   DrawerContent,

@@ -10,7 +10,7 @@ import {
   ToastTitle,
   ToastClose,
 } from "@numera/ui";
-import { createBrowserClient } from "@numera/db";
+import { createClient } from "../../../../lib/supabase/client";
 import type { DocumentTypeGuess } from "@numera/db";
 import { useNotificationCount } from "../../components/notification-count-context";
 
@@ -200,11 +200,11 @@ export function NotificationPanel() {
   const { setUnprocessedCount } = useNotificationCount();
 
   // Stable supabase client ref — created once, never recreated
-  const supabaseRef = useRef<ReturnType<typeof createBrowserClient> | null>(
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(
     null,
   );
   if (supabaseRef.current === null) {
-    supabaseRef.current = createBrowserClient();
+    supabaseRef.current = createClient();
   }
   const supabase = supabaseRef.current;
 

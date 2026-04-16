@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '../../../../lib/supabase/client';
 import type { Database, Client, BIRFormNumber } from '@numera/db';
 import {
   Select,
@@ -508,6 +508,9 @@ function mapClientRow(row: Database['public']['Tables']['clients']['Row']): Clie
     gmailAddress: row.gmail_address,
     monthlyRevenueBracket: row.monthly_revenue_bracket,
     googleSheetFolderUrl: row.google_sheet_folder_url ?? undefined,
+    contactName: row.contact_name ?? undefined,
+    contactPhone: row.contact_phone ?? undefined,
+    businessPhone: row.business_phone ?? undefined,
     status: row.status,
     convertedFromLeadId: row.converted_from_lead_id ?? undefined,
     createdAt: row.created_at,
@@ -534,14 +537,7 @@ function Shimmer() {
 
 export default function TaxPrepPage() {
   // ── Supabase client ─────────────────────────────────────────────────────────
-  const supabase = useMemo(
-    () =>
-      createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      ),
-    [],
-  );
+  const supabase = useMemo(() => createClient(), []);
 
   // ── Selector state ──────────────────────────────────────────────────────────
   const [formNumber, setFormNumber] = useState<BIRFormNumber | ''>('');
