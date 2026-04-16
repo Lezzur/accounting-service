@@ -1,4 +1,7 @@
+"use client";
+
 import { Button } from "@numera/ui";
+import { openBookingModal } from "./booking-modal";
 
 export function Hero() {
   return (
@@ -16,8 +19,8 @@ export function Hero() {
             AI-powered accuracy. One accountant. The throughput of five.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="w-full sm:w-auto" asChild>
-              <a href="#booking">Book a Discovery Call</a>
+            <Button size="lg" className="w-full sm:w-auto" onClick={openBookingModal}>
+              Book a Discovery Call
             </Button>
             <Button
               size="lg"

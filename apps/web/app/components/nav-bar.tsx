@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, cn } from "@numera/ui";
+import { openBookingModal } from "./booking-modal";
 
 const NAV_LINKS = [
   { label: "Services", href: "#services" },
@@ -66,8 +67,8 @@ export function NavBar() {
               {link.label}
             </a>
           ))}
-          <Button size="lg" asChild>
-            <a href="#booking">Book a Call</a>
+          <Button size="lg" onClick={openBookingModal}>
+            Book a Call
           </Button>
         </div>
 
@@ -144,10 +145,12 @@ export function NavBar() {
               </a>
             ))}
             <div className="mt-4">
-              <Button size="lg" className="w-full" asChild>
-                <a href="#booking" onClick={closeMenu}>
-                  Book a Call
-                </a>
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => { closeMenu(); openBookingModal(); }}
+              >
+                Book a Call
               </Button>
             </div>
           </div>

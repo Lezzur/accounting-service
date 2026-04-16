@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@numera/db';
+import { createServiceClient as createClient } from '@numera/db';
 import type { BusinessType, BIRRegistrationType } from '@numera/db';
 import { PAGE_SIZE } from './constants';
 

@@ -1,7 +1,5 @@
+import { redirect } from "next/navigation";
+
 export default function ToolboxPage() {
-  return (
-    <main>
-      <h1>Numera Toolbox</h1>
-    </main>
-  );
+  redirect("/crm/pipeline");
 }

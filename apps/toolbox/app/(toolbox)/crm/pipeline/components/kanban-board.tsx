@@ -11,7 +11,7 @@ import {
   useSensors,
   useDroppable,
 } from "@dnd-kit/core";
-import { createClient } from "@numera/db";
+import { createClient } from "../../../../../lib/supabase/client";
 import type { Database, LeadStage } from "@numera/db";
 import {
   Button,
@@ -178,7 +178,7 @@ function KanbanColumn({
           <>
             <SkeletonCard />
             <SkeletonCard />
-            {Math.random() > 0.4 && <SkeletonCard />}
+            <SkeletonCard />
           </>
         ) : leads.length === 0 ? (
           <p className="text-sm text-slate-500 text-center pt-6">No leads</p>

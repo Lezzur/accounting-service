@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { SkipToContent } from "@numera/ui";
 import { NavBar } from "./components/nav-bar";
 import { Footer } from "./components/footer";
+import { BookingModal } from "./components/booking-modal";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,6 +30,7 @@ export default function RootLayout({
         <NavBar />
         <div className="flex-1">{children}</div>
         <Footer />
+        <BookingModal />
       </body>
     </html>
   );

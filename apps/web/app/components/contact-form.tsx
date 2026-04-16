@@ -56,8 +56,16 @@ export function ContactForm() {
   function handleChange(field: keyof FormData, value: string) {
     if (field === "message" && value.length > MESSAGE_MAX) return;
     setForm((prev) => ({ ...prev, [field]: value }));
+    // Clear error as user corrects the field
     if (errors[field as keyof FieldError]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  }
+
+  function handleBlur(field: keyof FieldError) {
+    const fieldErrors = validate(form);
+    if (fieldErrors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: fieldErrors[field] }));
     }
   }
 
@@ -74,7 +82,10 @@ export function ContactForm() {
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/handle-contact-form`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify({
             name: form.name.trim(),
             email: form.email.trim(),
@@ -85,9 +96,14 @@ export function ContactForm() {
           }),
         }
       );
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        console.error("Contact form error:", res.status, body);
+        throw new Error("Request failed");
+      }
       setStatus("success");
-    } catch {
+    } catch (err) {
+      console.error("Contact form exception:", err);
       setStatus("error");
     }
   }
@@ -142,6 +158,7 @@ export function ContactForm() {
               required
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
+              onBlur={() => handleBlur("name")}
               error={!!errors.name}
               aria-describedby={errors.name ? "contact-name-error" : undefined}
             />
@@ -163,6 +180,7 @@ export function ContactForm() {
               required
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
+              onBlur={() => handleBlur("email")}
               error={!!errors.email}
               aria-describedby={errors.email ? "contact-email-error" : undefined}
             />
@@ -211,6 +229,7 @@ export function ContactForm() {
               rows={5}
               value={form.message}
               onChange={(e) => handleChange("message", e.target.value)}
+              onBlur={() => handleBlur("message")}
               aria-describedby={
                 [errors.message ? "contact-message-error" : "", "contact-message-counter"]
                   .filter(Boolean)

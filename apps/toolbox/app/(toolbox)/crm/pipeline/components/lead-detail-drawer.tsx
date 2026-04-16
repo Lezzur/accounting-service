@@ -23,7 +23,7 @@ import {
   ToastClose,
   cn,
 } from "@numera/ui";
-import { createClient } from "@numera/db";
+import { createClient } from "../../../../../lib/supabase/client";
 import type { Database, LeadSource, LeadStage } from "@numera/db";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -243,7 +243,6 @@ export function LeadDetailDrawer({
     try {
       // lead_activity_log is not yet in generated types — cast to bypass
       const { data, error } = await (supabase as ReturnType<typeof createClient>)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from("lead_activity_log" as any)
         .select("*, performed_by:users(full_name)")
         .eq("lead_id", id)

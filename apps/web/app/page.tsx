@@ -4,7 +4,6 @@ import { ServicesSection } from "./components/services-section";
 import { HowItWorks } from "./components/how-it-works";
 
 import { ContactForm } from "./components/contact-form";
-import { CalcomEmbed } from "./components/calcom-embed";
 
 export const metadata: Metadata = {
   title: "Numera — Expert Bookkeeping and Tax Compliance for Philippine Businesses",
@@ -26,7 +25,6 @@ export default function HomePage() {
       <ServicesSection />
       <HowItWorks />
       <ContactForm />
-      <CalcomEmbed />
     </main>
   );
 }

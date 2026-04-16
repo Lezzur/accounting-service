@@ -47,7 +47,7 @@ export default function LoginPage() {
     }
 
     failCount.current = 0;
-    router.push('/');
+    router.push('/crm/pipeline');
     router.refresh();
   }
 
