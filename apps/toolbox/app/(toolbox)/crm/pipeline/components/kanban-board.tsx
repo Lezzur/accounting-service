@@ -35,6 +35,7 @@ import {
 } from "@numera/ui";
 import { Plus, ChevronRight, ChevronDown } from "lucide-react";
 import { LeadCard, LeadCardInner } from "./lead-card";
+import { LeadDetailDrawer } from "./lead-detail-drawer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -370,82 +371,6 @@ function CloseReasonDialog({
   );
 }
 
-// ─── Lead detail drawer stub ──────────────────────────────────────────────────
-// Minimal drawer — renders selected lead info until a full detail view is built.
-
-function LeadDetailDrawer({
-  lead,
-  onClose,
-}: {
-  lead: LeadRow | null;
-  onClose: () => void;
-}) {
-  if (!lead) return null;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-30 bg-black/20"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      {/* Drawer */}
-      <aside
-        className={cn(
-          "fixed right-0 top-0 bottom-0 z-40 w-[480px] max-w-full",
-          "bg-white border-l border-slate-200 shadow-xl",
-          "flex flex-col",
-        )}
-        aria-label="Lead detail"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900 truncate">
-            {lead.business_name}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 transition-colors text-sm"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          {lead.contact_name && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Contact</p>
-              <p className="text-sm text-slate-900">{lead.contact_name}</p>
-            </div>
-          )}
-          <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Email</p>
-            <p className="text-sm text-slate-900">{lead.contact_email}</p>
-          </div>
-          {lead.contact_phone && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Phone</p>
-              <p className="text-sm text-slate-900">{lead.contact_phone}</p>
-            </div>
-          )}
-          {lead.notes && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Notes</p>
-              <p className="text-sm text-slate-900 whitespace-pre-wrap">{lead.notes}</p>
-            </div>
-          )}
-          {lead.close_reason && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Close Reason</p>
-              <p className="text-sm text-slate-900">{lead.close_reason}</p>
-            </div>
-          )}
-        </div>
-      </aside>
-    </>
-  );
-}
-
 // ─── Kanban board ─────────────────────────────────────────────────────────────
 
 export function KanbanBoard({
@@ -482,7 +407,7 @@ export function KanbanBoard({
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
 
   // Lead detail drawer
-  const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   // Toasts
   const [toasts, setToasts] = useState<ToastData[]>([]);
@@ -671,7 +596,7 @@ export function KanbanBoard({
                 config={col}
                 leads={grouped[col.stage]}
                 loading={loading}
-                onSelect={setSelectedLead}
+                onSelect={(lead) => setSelectedLeadId(lead.id)}
                 activeId={activeId}
                 onAddLead={col.stage === "lead" ? onAddLead : undefined}
               />
@@ -705,7 +630,7 @@ export function KanbanBoard({
             config={col}
             leads={grouped[col.stage]}
             loading={loading}
-            onSelect={setSelectedLead}
+            onSelect={(lead) => setSelectedLeadId(lead.id)}
             onStageChange={handleMobileStageChange}
           />
         ))}
@@ -724,8 +649,14 @@ export function KanbanBoard({
 
       {/* ── Lead detail drawer ───────────────────────────────────────── */}
       <LeadDetailDrawer
-        lead={selectedLead}
-        onClose={() => setSelectedLead(null)}
+        leadId={selectedLeadId}
+        onClose={() => setSelectedLeadId(null)}
+        onLeadUpdated={(updated) =>
+          setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)))
+        }
+        onLeadDeleted={(id) =>
+          setLeads((prev) => prev.filter((l) => l.id !== id))
+        }
       />
 
       {/* ── Toasts ──────────────────────────────────────────────────── */}
