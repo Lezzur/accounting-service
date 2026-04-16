@@ -211,7 +211,6 @@ function SettingsInner() {
       }
 
       // Fetch gmail_connections and system_settings in parallel
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = supabase as any;
 
       const [gmailResult, settingsResult] = await Promise.all([
@@ -278,7 +277,6 @@ function SettingsInner() {
     if (!gmailConn) return;
     setDisconnecting(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from("gmail_connections")
         .delete()
@@ -298,7 +296,6 @@ function SettingsInner() {
   const handleSaveSettings = useCallback(async () => {
     setSaving(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = supabase as any;
       const updates = (
         Object.entries(settings) as Array<[keyof SettingsValues, string]>

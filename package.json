@@ -11,5 +11,8 @@
   "devDependencies": {
     "turbo": "^2.3.0",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@floating-ui/utils": "^0.2.11"
   }
 }

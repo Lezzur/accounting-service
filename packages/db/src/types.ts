@@ -897,39 +897,6 @@ export interface Database {
           created_at?: string;
         };
       };
-    };
-      ai_corrections: {
-        Row: {
-          id: string;
-          transaction_id: string;
-          field_name: string;
-          original_value: string;
-          corrected_value: string;
-          corrected_by: string;
-          correction_source: 'manual' | 'bulk_edit';
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          transaction_id: string;
-          field_name: string;
-          original_value: string;
-          corrected_value: string;
-          corrected_by: string;
-          correction_source?: 'manual' | 'bulk_edit';
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          transaction_id?: string;
-          field_name?: string;
-          original_value?: string;
-          corrected_value?: string;
-          corrected_by?: string;
-          correction_source?: 'manual' | 'bulk_edit';
-          created_at?: string;
-        };
-      };
       system_settings: {
         Row: {
           key: string;

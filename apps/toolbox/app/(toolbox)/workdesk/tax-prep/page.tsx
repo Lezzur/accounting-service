@@ -632,6 +632,27 @@ export default function TaxPrepPage() {
   }, [formNumber]);
 
   // ── Pre-fill ─────────────────────────────────────────────────────────────────
+  const fetchPriorYear = useCallback(async () => {
+    if (!formNumber || !clientId || !filingPeriod) return;
+
+    try {
+      const { data } = await supabase.functions.invoke<{
+        prefillData: Record<string, string>;
+        periodLabel: string;
+      }>('prefill-bir-form', {
+        body: { formNumber, clientId, filingPeriod, priorYear: true },
+      });
+      if (data) {
+        setPriorYearData(data.prefillData);
+        setPriorYearLabel(data.periodLabel);
+      } else {
+        setPriorYearData(null);
+      }
+    } catch {
+      setPriorYearData(null);
+    }
+  }, [supabase, formNumber, clientId, filingPeriod]);
+
   const handlePrefill = useCallback(async () => {
     if (!canPrefill) return;
 
@@ -656,34 +677,13 @@ export default function TaxPrepPage() {
       setPrefilled(true);
 
       // Fetch prior-year comparison
-      fetchPriorYear(data.prefillData);
+      fetchPriorYear();
     } catch {
       setToast({ open: true, variant: 'error', title: 'Pre-fill failed. Please try again.' });
     } finally {
       setPrefilling(false);
     }
-  }, [canPrefill, supabase, formNumber, clientId, filingPeriod]);
-
-  async function fetchPriorYear(currentData: Record<string, string>) {
-    if (!formNumber || !clientId || !filingPeriod) return;
-
-    try {
-      const { data } = await supabase.functions.invoke<{
-        prefillData: Record<string, string>;
-        periodLabel: string;
-      }>('prefill-bir-form', {
-        body: { formNumber, clientId, filingPeriod, priorYear: true },
-      });
-      if (data) {
-        setPriorYearData(data.prefillData);
-        setPriorYearLabel(data.periodLabel);
-      } else {
-        setPriorYearData(null);
-      }
-    } catch {
-      setPriorYearData(null);
-    }
-  }
+  }, [canPrefill, supabase, formNumber, clientId, filingPeriod, fetchPriorYear]);
 
   // ── Field change ─────────────────────────────────────────────────────────────
   function handleFieldChange(fieldId: string, value: string) {
