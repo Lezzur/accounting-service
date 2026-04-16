@@ -1,5 +1,21 @@
 node_modules/
 dist/
 .env
+.env.local
+.env.*.local
 .barker/
 worktrees/
+
+# Next.js build output
+.next/
+out/
+
+# Turbo
+.turbo/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
