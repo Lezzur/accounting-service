@@ -3,9 +3,8 @@ import { Hero } from "./components/hero";
 import { ServicesSection } from "./components/services-section";
 import { HowItWorks } from "./components/how-it-works";
 
-// Placeholders — built in next task
-// import { ContactForm } from "./components/contact-form";
-// import { CalcomEmbed } from "./components/calcom-embed";
+import { ContactForm } from "./components/contact-form";
+import { CalcomEmbed } from "./components/calcom-embed";
 
 export const metadata: Metadata = {
   title: "Numera — Expert Bookkeeping and Tax Compliance for Philippine Businesses",
@@ -26,7 +25,8 @@ export default function HomePage() {
       <Hero />
       <ServicesSection />
       <HowItWorks />
-      {/* ContactForm and CalcomEmbed added in next task */}
+      <ContactForm />
+      <CalcomEmbed />
     </main>
   );
 }
