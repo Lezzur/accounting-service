@@ -866,6 +866,91 @@ export interface Database {
         };
       };
     };
+      ai_corrections: {
+        Row: {
+          id: string;
+          transaction_id: string;
+          field_name: string;
+          original_value: string;
+          corrected_value: string;
+          corrected_by: string;
+          correction_source: 'manual' | 'bulk_edit';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          transaction_id: string;
+          field_name: string;
+          original_value: string;
+          corrected_value: string;
+          corrected_by: string;
+          correction_source?: 'manual' | 'bulk_edit';
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          transaction_id?: string;
+          field_name?: string;
+          original_value?: string;
+          corrected_value?: string;
+          corrected_by?: string;
+          correction_source?: 'manual' | 'bulk_edit';
+          created_at?: string;
+        };
+      };
+      system_settings: {
+        Row: {
+          key: string;
+          value: unknown;
+          description: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value: unknown;
+          description?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          key?: string;
+          value?: unknown;
+          description?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+      };
+      document_attachments: {
+        Row: {
+          id: string;
+          email_notification_id: string;
+          filename: string;
+          storage_path: string;
+          mime_type: string;
+          size_bytes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email_notification_id: string;
+          filename: string;
+          storage_path: string;
+          mime_type: string;
+          size_bytes: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email_notification_id?: string;
+          filename?: string;
+          storage_path?: string;
+          mime_type?: string;
+          size_bytes?: number;
+          created_at?: string;
+        };
+      };
+    };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: Record<string, never>;
