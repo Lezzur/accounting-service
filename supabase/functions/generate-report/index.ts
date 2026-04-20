@@ -746,7 +746,7 @@ Deno.serve(async (req) => {
       // Balance sheet is cumulative — transactions up to periodEnd, not just within period
       const { data: transactions, error: txnError } = await serviceClient
         .from('transactions')
-        .select('id, date, description, amount, type, category_code, chart_of_accounts!inner(code, name, type, normal_balance)')
+        .select('id, date, description, amount, type, category_code, chart_of_accounts!inner(code, name, type:account_type, normal_balance)')
         .eq('client_id', clientId)
         .eq('status', 'approved')
         .lte('date', periodEnd);
@@ -761,7 +761,7 @@ Deno.serve(async (req) => {
       // All other reports: transactions within period
       const { data: transactions, error: txnError } = await serviceClient
         .from('transactions')
-        .select('id, date, description, amount, type, category_code, chart_of_accounts!inner(code, name, type, normal_balance)')
+        .select('id, date, description, amount, type, category_code, chart_of_accounts!inner(code, name, type:account_type, normal_balance)')
         .eq('client_id', clientId)
         .eq('status', 'approved')
         .gte('date', periodStart)

@@ -19,3 +19,7 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local tooling state (not for the repo)
+.claude/
+supabase/.temp/

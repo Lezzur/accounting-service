@@ -369,8 +369,8 @@ CREATE TABLE IF NOT EXISTS draft_emails (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-DO $$ BEGIN CREATE INDEX idx_draft_emails_client_deadline ON draft_emails(client_id, deadline_id); EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
-DO $$ BEGIN CREATE INDEX idx_draft_emails_status ON draft_emails(status) WHERE status IN ('pending_review', 'approved'); EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+CREATE INDEX IF NOT EXISTS idx_draft_emails_client_deadline ON draft_emails(client_id, deadline_id);
+CREATE INDEX IF NOT EXISTS idx_draft_emails_status ON draft_emails(status) WHERE status IN ('pending_review', 'approved');
 DO $$ BEGIN CREATE TRIGGER trg_draft_emails_updated_at BEFORE UPDATE ON draft_emails FOR EACH ROW EXECUTE FUNCTION set_updated_at(); EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
 ALTER TABLE draft_emails ENABLE ROW LEVEL SECURITY;

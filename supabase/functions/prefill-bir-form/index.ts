@@ -238,6 +238,59 @@ async function evaluateSumAccountType(
   return total.toFixed(2);
 }
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function evaluatePeriodPart(
+  effectivePeriod: string,
+  fiscalYearStartMonth: number,
+  expr: Record<string, unknown>,
+  warnings: string[],
+  fieldLabel: string,
+): string | null {
+  const part = expr.part as string | undefined;
+  if (!part) {
+    warnings.push(`No 'part' configured for period_part mapping '${fieldLabel}'`);
+    return null;
+  }
+
+  const qMatch = effectivePeriod.match(QUARTERLY_RE);
+  const mMatch = effectivePeriod.match(MONTHLY_RE);
+  const aMatch = effectivePeriod.match(ANNUAL_RE);
+
+  switch (part) {
+    case 'year': {
+      if (qMatch) return qMatch[2];
+      if (mMatch) return mMatch[1];
+      if (aMatch) return aMatch[1];
+      return null;
+    }
+    case 'quarter': {
+      if (qMatch) return qMatch[1];
+      return null;
+    }
+    case 'month': {
+      if (mMatch) {
+        const idx = parseInt(mMatch[2]) - 1;
+        return MONTH_NAMES[idx] ?? null;
+      }
+      return null;
+    }
+    case 'fiscal_year_end': {
+      // fiscal_year_start_month=1 → ends December 31; start=4 → ends March 31
+      const endMonthIdx = (fiscalYearStartMonth + 10) % 12; // start-1 then wrapped: Jan(1) => Dec(11)
+      const endMonthName = MONTH_NAMES[endMonthIdx];
+      const endDay = new Date(2001, endMonthIdx + 1, 0).getDate();
+      return `${endMonthName} ${endDay}`;
+    }
+    default:
+      warnings.push(`Unknown period_part '${part}' for field '${fieldLabel}'`);
+      return null;
+  }
+}
+
 async function evaluateClientField(
   serviceClient: SupabaseClient,
   clientId: string,
@@ -352,8 +405,8 @@ function evaluateFormula(
     return val != null ? val : '0';
   });
 
-  // Safe numeric evaluation: only allow digits, decimal points, operators, parens, whitespace
-  if (!/^[\d.+\-*/() ]+$/.test(expression)) {
+  // Safe numeric evaluation: allow digits, operators, parens, Math.max/min, commas, ternary
+  if (!/^[\d.+\-*/() ,?:]+$/.test(expression.replace(/Math\.(max|min|abs|round|floor|ceil)/g, ''))) {
     throw new Error(`Unsafe formula expression: ${expression}`);
   }
 
@@ -520,6 +573,13 @@ Deno.serve(async (req) => {
         case 'client_field':
           value = await evaluateClientField(
             serviceClient, clientId, expr, warnings, m.field_label,
+          );
+          break;
+
+        case 'period_part':
+          value = evaluatePeriodPart(
+            effectivePeriod, client.fiscal_year_start_month,
+            expr, warnings, m.field_label,
           );
           break;
 
