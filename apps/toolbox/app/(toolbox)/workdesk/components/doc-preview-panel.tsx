@@ -331,7 +331,7 @@ export function DocPreviewPanel({
       const { data: notif, error: notifError } = await supabase
         .from("email_notifications")
         .select("sender_email, subject, received_at")
-        .eq("id", notificationId)
+        .eq("id", notificationId!)
         .single();
 
       if (cancelled) return;
@@ -347,7 +347,7 @@ export function DocPreviewPanel({
       const { data: attachments, error: attachError } = await supabase
         .from("document_attachments")
         .select("id, original_filename, storage_path, mime_type")
-        .eq("email_notification_id", notificationId)
+        .eq("email_notification_id", notificationId!)
         .order("created_at", { ascending: true })
         .limit(1);
 

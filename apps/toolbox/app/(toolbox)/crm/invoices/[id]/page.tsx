@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn } from '@numera/ui';
-import { ArrowLeft, RefreshCw, Send, Printer } from 'lucide-react';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@numera/ui';
+import { ArrowLeft, RefreshCw, Printer } from 'lucide-react';
 import { createClient } from '../../../../../lib/supabase/client';
 
 // ─── Types ──────────────────────────────────────────────────────────────────

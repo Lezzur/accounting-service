@@ -79,7 +79,7 @@ export function NewTaskDrawer({
     if (editTask) {
       setTitle(editTask.title);
       setDueDate(editTask.due_date);
-      setLinkedEntityType(editTask.linked_entity_type ?? "");
+      setLinkedEntityType((editTask.linked_entity_type ?? "") as "" | "lead" | "client");
       setLinkedEntityId(editTask.linked_entity_id ?? "");
       setPriority(editTask.priority);
       setStatus(editTask.status);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../../../../../lib/supabase/client';
 import {
@@ -237,7 +237,18 @@ function PreviewDialog({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// `useSearchParams` requires its consumer to be inside a Suspense boundary
+// during static prerender. Wrap the whole page in one and keep the real
+// component as a separate inner function.
 export default function CreateInvoicePage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateInvoicePageInner />
+    </Suspense>
+  );
+}
+
+function CreateInvoicePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledClientId = searchParams.get('clientId') ?? '';

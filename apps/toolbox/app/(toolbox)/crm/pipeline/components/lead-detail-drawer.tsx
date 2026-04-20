@@ -250,7 +250,7 @@ export function LeadDetailDrawer({
         .eq("lead_id", id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setActivity((data as ActivityEntry[]) ?? []);
+      setActivity((data as unknown as ActivityEntry[]) ?? []);
     } catch {
       // Silently fail — activity is non-critical
     } finally {

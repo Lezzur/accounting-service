@@ -115,7 +115,7 @@ function KanbanColumn({
   leads,
   loading,
   onSelect,
-  activeId,
+  activeId: _activeId,
   onAddLead,
 }: {
   config: ColumnConfig;

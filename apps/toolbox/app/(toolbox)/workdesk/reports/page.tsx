@@ -48,12 +48,68 @@ type GeneratedReport = {
   clientName: string;
   periodStart: string;
   periodEnd: string;
-  periodLabel: string;
+  periodLabel?: string;
   sections: ReportSection[];
   aiNarrative?: string;
+  aiNarrativeApproved?: boolean;
   warnings?: string[];
+  validationWarnings?: string[];
+  totals?: Record<string, unknown>;
 };
 
+// ─── Edge function → frontend section transformer ─────────────────────────────
+
+function transformSections(raw: any[]): ReportSection[] {
+  return (raw ?? []).map((s: any) => {
+    const items: any[] = s.lineItems ?? s.rows ?? [];
+    const rows: ReportRow[] = [];
+
+    for (const item of items) {
+      // Determine label
+      const label =
+        item.label ??
+        (item.code && item.name ? `${item.code} — ${item.name}` : null) ??
+        item.name ??
+        item.description ??
+        (item.clientOrVendor && item.invoiceNumber
+          ? `${item.clientOrVendor} (${item.invoiceNumber})`
+          : null) ??
+        item.clientOrVendor ??
+        `${item.date ?? ''}`;
+
+      // Determine amount
+      const amount = parseFloat(
+        item.amount ?? item.balance ?? item.runningBalance ?? '0',
+      );
+
+      rows.push({
+        label,
+        amount: isNaN(amount) ? null : amount,
+        indent: item.indent ?? 1,
+      });
+    }
+
+    // Add subtotal row if present
+    if (s.subtotal != null) {
+      rows.push({
+        label: `Total ${s.title}`,
+        amount: parseFloat(s.subtotal),
+        isSubtotal: true,
+      });
+    }
+
+    // Add closing balance row for general ledger
+    if (s.closingBalance != null) {
+      rows.push({
+        label: 'Closing Balance',
+        amount: parseFloat(s.closingBalance),
+        isSubtotal: true,
+      });
+    }
+
+    return { title: s.title, rows };
+  });
+}
 type ToastState = {
   open: boolean;
   variant: 'success' | 'error' | 'default';
@@ -86,6 +142,32 @@ const PERIOD_PRESETS = [
 
 // Report types that include an AI narrative
 const NARRATIVE_TYPES: ReportType[] = ['profit_and_loss', 'balance_sheet'];
+
+function resolvePeriod(preset: string): { start: string; end: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-indexed
+  const fmt = (d: Date) => d.toISOString().split('T')[0]!;
+
+  switch (preset) {
+    case 'this_month':
+      return { start: fmt(new Date(y, m, 1)), end: fmt(new Date(y, m + 1, 0)) };
+    case 'last_month':
+      return { start: fmt(new Date(y, m - 1, 1)), end: fmt(new Date(y, m, 0)) };
+    case 'this_quarter': {
+      const qStart = Math.floor(m / 3) * 3;
+      return { start: fmt(new Date(y, qStart, 1)), end: fmt(new Date(y, qStart + 3, 0)) };
+    }
+    case 'last_quarter': {
+      const qStart = Math.floor(m / 3) * 3 - 3;
+      return { start: fmt(new Date(y, qStart, 1)), end: fmt(new Date(y, qStart + 3, 0)) };
+    }
+    case 'this_year':
+      return { start: fmt(new Date(y, 0, 1)), end: fmt(new Date(y, 11, 31)) };
+    default:
+      return { start: '', end: '' };
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -222,9 +304,27 @@ export default function ReportsPage() {
     if (data) setPreviousReports(data.map(mapReportRow));
   }
 
+  // ── Load a previous report by re-generating with its parameters ─────────────
+  function handleLoadPrevious(r: FinancialReport) {
+    setReportType(r.reportType);
+    setPeriod('custom');
+    setCustomStart(r.periodStart);
+    setCustomEnd(r.periodEnd);
+    // Trigger generation on next tick after state settles
+    setTimeout(() => {
+      generateReport(r.reportType, clientId, 'custom', r.periodStart, r.periodEnd);
+    }, 0);
+  }
+
   // ── Generate report ─────────────────────────────────────────────────────────
-  async function handleGenerate() {
-    if (!reportType || !clientId) return;
+  async function generateReport(
+    type: ReportType | '',
+    client: string,
+    p: string,
+    cStart: string,
+    cEnd: string,
+  ) {
+    if (!type || !client) return;
 
     setGenerating(true);
     setGeneratingLong(false);
@@ -238,11 +338,19 @@ export default function ReportsPage() {
     longTimerRef.current = setTimeout(() => setGeneratingLong(true), 3000);
 
     try {
-      const body: Record<string, string> = { reportType, clientId, period };
-      if (period === 'custom') {
-        body.periodStart = customStart;
-        body.periodEnd = customEnd;
+      let periodStart = cStart;
+      let periodEnd = cEnd;
+      if (p !== 'custom') {
+        const resolved = resolvePeriod(p);
+        periodStart = resolved.start;
+        periodEnd = resolved.end;
       }
+      const body: Record<string, string> = {
+        reportType: type,
+        clientId: client,
+        periodStart,
+        periodEnd,
+      };
 
       const { data, error } = await supabase.functions.invoke<GeneratedReport>(
         'generate-report',
@@ -262,9 +370,17 @@ export default function ReportsPage() {
       }
 
       if (data) {
-        setReport(data);
-        setNarrativeText(data.aiNarrative ?? '');
-        await refreshPreviousReports(clientId);
+        // Edge function wraps response: { success, data: { ... }, meta }
+        const raw: any = (data as Record<string, unknown>).data ?? data;
+        const report: GeneratedReport = {
+          ...raw,
+          periodLabel: raw.periodLabel ?? `${raw.periodStart} – ${raw.periodEnd}`,
+          sections: transformSections(raw.sections),
+          warnings: raw.validationWarnings ?? raw.warnings ?? [],
+        };
+        setReport(report);
+        setNarrativeText(report.aiNarrative ?? '');
+        await refreshPreviousReports(client);
       }
     } catch {
       setErrorKind('generation_failed');
@@ -273,6 +389,10 @@ export default function ReportsPage() {
       setGenerating(false);
       setGeneratingLong(false);
     }
+  }
+
+  function handleGenerate() {
+    generateReport(reportType, clientId, period, customStart, customEnd);
   }
 
   // ── Export PDF ──────────────────────────────────────────────────────────────
@@ -289,7 +409,7 @@ export default function ReportsPage() {
       link.href = data.url;
       const type = REPORT_TYPE_LABELS[report.reportType].replace(/\s+/g, '-');
       const client = report.clientName.replace(/\s+/g, '-');
-      const pd = report.periodLabel.replace(/\s+/g, '-');
+      const pd = (report.periodLabel ?? '').replace(/\s+/g, '-');
       link.download = `${type}-${client}-${pd}.pdf`;
       link.click();
     } catch {
@@ -459,25 +579,32 @@ export default function ReportsPage() {
                   No reports generated yet for this client.
                 </p>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-1">
                   {previousReports.map((r) => (
                     <li key={r.id}>
-                      <div className="text-xs font-medium text-slate-700">
-                        {REPORT_TYPE_LABELS[r.reportType]}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {new Date(r.generatedAt).toLocaleDateString('en-PH', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                        {' · '}
-                        {r.periodStart.slice(0, 7)} – {r.periodEnd.slice(0, 7)}
-                      </div>
+                      <button
+                        type="button"
+                        className="w-full text-left px-2 py-2 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                        onClick={() => handleLoadPrevious(r)}
+                        disabled={generating}
+                      >
+                        <div className="text-xs font-medium text-slate-700">
+                          {REPORT_TYPE_LABELS[r.reportType]}
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {new Date(r.generatedAt).toLocaleDateString('en-PH', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                          {' · '}
+                          {r.periodStart.slice(0, 7)} – {r.periodEnd.slice(0, 7)}
+                        </div>
+                      </button>
                       {r.exportedPdfPath && (
                         <a
                           href={r.exportedPdfPath}
-                          className="mt-1 inline-flex items-center gap-1 text-[11px] text-teal-600 hover:underline"
+                          className="ml-2 mt-1 inline-flex items-center gap-1 text-[11px] text-teal-600 hover:underline"
                           target="_blank"
                           rel="noopener noreferrer"
                         >

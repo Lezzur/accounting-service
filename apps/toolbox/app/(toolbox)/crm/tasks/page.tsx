@@ -770,7 +770,7 @@ function TaskTableRow({
       {/* Linked Entity */}
       <td className="px-4 py-3">
         {task.linked_entity_type ? (
-          <EntityTypeBadge type={task.linked_entity_type} />
+          <EntityTypeBadge type={task.linked_entity_type as "lead" | "client"} />
         ) : (
           <span className="text-xs text-slate-400">—</span>
         )}

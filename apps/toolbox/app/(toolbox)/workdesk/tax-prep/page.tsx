@@ -25,7 +25,6 @@ import {
   TrendingUp,
   TrendingDown,
   ChevronRight,
-  X,
   Info,
 } from 'lucide-react';
 
@@ -420,7 +419,6 @@ const FORM_TEMPLATES: Record<BIRFormNumber, { name: string; sections: FormSectio
 
 const MONTHLY_FORMS: BIRFormNumber[] = ['2550M', '1601-C', '0619-E', '0619-F'];
 const QUARTERLY_FORMS: BIRFormNumber[] = ['2550Q', '2551Q', '1701Q', '1702Q', '1601-EQ'];
-const ANNUAL_FORMS: BIRFormNumber[] = ['1701', '1702'];
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -444,7 +442,7 @@ function generatePeriods(formNumber: BIRFormNumber): { value: string; label: str
     for (let y = currentYear; y >= currentYear - 1; y--) {
       for (let q = 4; q >= 1; q--) {
         if (y === currentYear && (q - 1) * 3 > now.getMonth()) continue;
-        periods.push({ value: `${y}-Q${q}`, label: `Q${q} ${y}` });
+        periods.push({ value: `Q${q}-${y}`, label: `Q${q} ${y}` });
       }
     }
   } else {
@@ -660,7 +658,24 @@ export default function TaxPrepPage() {
       );
 
       if (error || !data) {
-        setToast({ open: true, variant: 'error', title: 'Pre-fill failed. Please try again.' });
+        // Try to extract the real backend error message from the FunctionsHttpError
+        let detail = '';
+        const ctx = (error as any)?.context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            const body = await ctx.json();
+            detail = body?.error?.message || body?.message || '';
+          } catch {
+            /* ignore */
+          }
+        }
+        setToast({
+          open: true,
+          variant: 'error',
+          title: detail
+            ? `Pre-fill failed: ${detail}`
+            : 'Pre-fill failed. Please try again.',
+        });
         return;
       }
 
@@ -674,8 +689,13 @@ export default function TaxPrepPage() {
 
       // Fetch prior-year comparison
       fetchPriorYear();
-    } catch {
-      setToast({ open: true, variant: 'error', title: 'Pre-fill failed. Please try again.' });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      setToast({
+        open: true,
+        variant: 'error',
+        title: msg ? `Pre-fill failed: ${msg}` : 'Pre-fill failed. Please try again.',
+      });
     } finally {
       setPrefilling(false);
     }

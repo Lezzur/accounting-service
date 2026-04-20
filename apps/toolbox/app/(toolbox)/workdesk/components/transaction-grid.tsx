@@ -214,7 +214,7 @@ export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
   const [rejectingTxnId, setRejectingTxnId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectLoading, setRejectLoading] = useState(false);
-  const [failedRowIds, setFailedRowIds] = useState<Set<string>>(new Set());
+  const [failedRowIds, _setFailedRowIds] = useState<Set<string>>(new Set());
   const [suggestingCategoryFor, setSuggestingCategoryFor] = useState<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -269,7 +269,7 @@ export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
           .order("business_name"),
         supabase
           .from("chart_of_accounts")
-          .select("code, name, type")
+          .select("code, name, type:account_type")
           .eq("is_active", true)
           .order("code"),
       ]);
@@ -289,7 +289,7 @@ export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
         .select(
           `
           *,
-          category:chart_of_accounts(code, name, type),
+          category:chart_of_accounts(code, name, type:account_type),
           source_email:email_notifications(subject, sender_email),
           approved_by_user:users!approved_by(full_name),
           client:clients(business_name)
@@ -591,6 +591,10 @@ export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
       if (isCategoryChange && wasApproved) {
         updatePayload.status = "in_review";
       }
+      // `.update()` expects the specific Update type, but we only know the
+      // shape at runtime (dynamic key). Cast — narrowing here would require
+      // per-column overloads we don't have.
+      const typedPayload = updatePayload as never;
 
       // Optimistic update
       setTransactions((prev) =>
@@ -613,7 +617,7 @@ export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
 
       const { error: updateError } = await supabase
         .from("transactions")
-        .update(updatePayload)
+        .update(typedPayload)
         .eq("id", txnId);
 
       if (updateError) {
@@ -773,7 +777,7 @@ export function TransactionGrid({ onDocPreview }: TransactionGridProps) {
   // ── Edit cell renderer ──
   const renderEditCell = useCallback(
     ({
-      row,
+      row: _row,
       columnId,
       value,
       onCommit,

@@ -807,7 +807,7 @@ export default function DeadlinesPage() {
                           )}
                         >
                           {DEADLINE_TYPE_LABELS[deadline.deadline_type]}
-                          {deadline.period ? ` — ${deadline.period}` : ""}
+                          {deadline.period_label ? ` — ${deadline.period_label}` : ""}
                         </p>
 
                         {/* BIR weekend flag */}
