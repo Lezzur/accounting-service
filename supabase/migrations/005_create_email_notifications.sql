@@ -1,7 +1,7 @@
 -- 005_create_email_notifications.sql
 -- Email notification pipeline and document attachments
 
-CREATE TABLE email_notifications (
+CREATE TABLE IF NOT EXISTS email_notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   gmail_message_id text NOT NULL UNIQUE,
   gmail_thread_id text,
@@ -23,23 +23,25 @@ CREATE TABLE email_notifications (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_email_notif_gmail_msg_id ON email_notifications(gmail_message_id);
-CREATE INDEX idx_email_notif_status ON email_notifications(status) WHERE status = 'unprocessed';
-CREATE INDEX idx_email_notif_client_id ON email_notifications(client_id, received_at DESC);
-CREATE INDEX idx_email_notif_received_at ON email_notifications(received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_notif_gmail_msg_id ON email_notifications(gmail_message_id);
+CREATE INDEX IF NOT EXISTS idx_email_notif_status ON email_notifications(status) WHERE status = 'unprocessed';
+CREATE INDEX IF NOT EXISTS idx_email_notif_client_id ON email_notifications(client_id, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_notif_received_at ON email_notifications(received_at DESC);
 
 ALTER TABLE email_notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "email_notif_select_authenticated" ON email_notifications;
 CREATE POLICY "email_notif_select_authenticated"
   ON email_notifications FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP TRIGGER IF EXISTS trg_email_notif_updated_at ON email_notifications;
 CREATE TRIGGER trg_email_notif_updated_at
   BEFORE UPDATE ON email_notifications
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
 -- Document attachments stored in Supabase Storage
-CREATE TABLE document_attachments (
+CREATE TABLE IF NOT EXISTS document_attachments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email_notification_id uuid NOT NULL REFERENCES email_notifications(id) ON DELETE CASCADE,
   storage_path text NOT NULL,
@@ -50,10 +52,11 @@ CREATE TABLE document_attachments (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_doc_attach_email_notif ON document_attachments(email_notification_id);
+CREATE INDEX IF NOT EXISTS idx_doc_attach_email_notif ON document_attachments(email_notification_id);
 
 ALTER TABLE document_attachments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "doc_attach_select_authenticated" ON document_attachments;
 CREATE POLICY "doc_attach_select_authenticated"
   ON document_attachments FOR SELECT
   USING (auth.role() = 'authenticated');

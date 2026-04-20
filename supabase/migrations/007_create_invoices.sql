@@ -1,7 +1,7 @@
 -- 007_create_invoices.sql
 -- Client billing invoices and line items
 
-CREATE TABLE invoices (
+CREATE TABLE IF NOT EXISTS invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_number text NOT NULL UNIQUE,
   client_id uuid NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
@@ -20,23 +20,25 @@ CREATE TABLE invoices (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_invoices_client ON invoices(client_id, issue_date DESC);
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_invoices_due_date ON invoices(due_date) WHERE status = 'sent';
-CREATE INDEX idx_invoices_number ON invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id, issue_date DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date) WHERE status = 'sent';
+CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
 
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "invoices_all_authenticated" ON invoices;
 CREATE POLICY "invoices_all_authenticated"
   ON invoices FOR ALL
   USING (auth.role() = 'authenticated');
 
+DROP TRIGGER IF EXISTS trg_invoices_updated_at ON invoices;
 CREATE TRIGGER trg_invoices_updated_at
   BEFORE UPDATE ON invoices
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
 -- Invoice line items — relational, not JSONB
-CREATE TABLE invoice_line_items (
+CREATE TABLE IF NOT EXISTS invoice_line_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   description text NOT NULL,
@@ -47,10 +49,11 @@ CREATE TABLE invoice_line_items (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_line_items_invoice ON invoice_line_items(invoice_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_line_items_invoice ON invoice_line_items(invoice_id, display_order);
 
 ALTER TABLE invoice_line_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "line_items_all_authenticated" ON invoice_line_items;
 CREATE POLICY "line_items_all_authenticated"
   ON invoice_line_items FOR ALL
   USING (auth.role() = 'authenticated');

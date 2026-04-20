@@ -1,7 +1,7 @@
 -- 003_create_clients.sql
 -- Clients, Gmail connections, and client activity log
 
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_name text NOT NULL,
   business_type text NOT NULL CHECK (business_type IN ('sole_prop', 'opc', 'corporation')),
@@ -19,22 +19,24 @@ CREATE TABLE clients (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_clients_status ON clients(status);
-CREATE INDEX idx_clients_gmail ON clients(gmail_address);
-CREATE INDEX idx_clients_business_name ON clients(business_name);
+CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status);
+CREATE INDEX IF NOT EXISTS idx_clients_gmail ON clients(gmail_address);
+CREATE INDEX IF NOT EXISTS idx_clients_business_name ON clients(business_name);
 
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "clients_all_authenticated" ON clients;
 CREATE POLICY "clients_all_authenticated"
   ON clients FOR ALL
   USING (auth.role() = 'authenticated');
 
+DROP TRIGGER IF EXISTS trg_clients_updated_at ON clients;
 CREATE TRIGGER trg_clients_updated_at
   BEFORE UPDATE ON clients
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
 -- Gmail OAuth token storage
-CREATE TABLE gmail_connections (
+CREATE TABLE IF NOT EXISTS gmail_connections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id),
   gmail_email text NOT NULL UNIQUE,
@@ -49,11 +51,12 @@ CREATE TABLE gmail_connections (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_gmail_connections_status ON gmail_connections(status);
-CREATE INDEX idx_gmail_connections_watch_exp ON gmail_connections(watch_expiration);
+CREATE INDEX IF NOT EXISTS idx_gmail_connections_status ON gmail_connections(status);
+CREATE INDEX IF NOT EXISTS idx_gmail_connections_watch_exp ON gmail_connections(watch_expiration);
 
 ALTER TABLE gmail_connections ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "gmail_connections_admin_select" ON gmail_connections;
 CREATE POLICY "gmail_connections_admin_select"
   ON gmail_connections FOR SELECT
   USING (
@@ -62,6 +65,7 @@ CREATE POLICY "gmail_connections_admin_select"
     )
   );
 
+DROP POLICY IF EXISTS "gmail_connections_admin_update" ON gmail_connections;
 CREATE POLICY "gmail_connections_admin_update"
   ON gmail_connections FOR UPDATE
   USING (
@@ -70,12 +74,13 @@ CREATE POLICY "gmail_connections_admin_update"
     )
   );
 
+DROP TRIGGER IF EXISTS trg_gmail_connections_updated_at ON gmail_connections;
 CREATE TRIGGER trg_gmail_connections_updated_at
   BEFORE UPDATE ON gmail_connections
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
 -- Client activity log: immutable audit trail
-CREATE TABLE client_activity_log (
+CREATE TABLE IF NOT EXISTS client_activity_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   action text NOT NULL,
@@ -84,10 +89,11 @@ CREATE TABLE client_activity_log (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_client_activity_client_id ON client_activity_log(client_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_client_activity_client_id ON client_activity_log(client_id, created_at DESC);
 
 ALTER TABLE client_activity_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "client_activity_select_authenticated" ON client_activity_log;
 CREATE POLICY "client_activity_select_authenticated"
   ON client_activity_log FOR SELECT
   USING (auth.role() = 'authenticated');

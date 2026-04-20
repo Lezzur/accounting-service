@@ -1,7 +1,7 @@
 -- 010_create_financial_reports.sql
 -- Metadata for generated financial reports; content rendered on demand from transactions
 
-CREATE TABLE financial_reports (
+CREATE TABLE IF NOT EXISTS financial_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id uuid NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   report_type text NOT NULL CHECK (report_type IN (
@@ -26,10 +26,11 @@ CREATE TABLE financial_reports (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_reports_client_type ON financial_reports(client_id, report_type, period_start DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_client_type ON financial_reports(client_id, report_type, period_start DESC);
 
 ALTER TABLE financial_reports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "financial_reports_all_authenticated" ON financial_reports;
 CREATE POLICY "financial_reports_all_authenticated"
   ON financial_reports FOR ALL
   USING (auth.role() = 'authenticated');

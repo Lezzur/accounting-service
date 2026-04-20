@@ -1,7 +1,7 @@
 -- 004_create_chart_of_accounts.sql
 -- Standard chart of accounts for transaction categorization
 
-CREATE TABLE chart_of_accounts (
+CREATE TABLE IF NOT EXISTS chart_of_accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   code text NOT NULL UNIQUE,
   name text NOT NULL,
@@ -15,16 +15,18 @@ CREATE TABLE chart_of_accounts (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_coa_code ON chart_of_accounts(code);
-CREATE INDEX idx_coa_account_type ON chart_of_accounts(account_type);
-CREATE INDEX idx_coa_parent_code ON chart_of_accounts(parent_code);
+CREATE INDEX IF NOT EXISTS idx_coa_code ON chart_of_accounts(code);
+CREATE INDEX IF NOT EXISTS idx_coa_account_type ON chart_of_accounts(account_type);
+CREATE INDEX IF NOT EXISTS idx_coa_parent_code ON chart_of_accounts(parent_code);
 
 ALTER TABLE chart_of_accounts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "coa_select_authenticated" ON chart_of_accounts;
 CREATE POLICY "coa_select_authenticated"
   ON chart_of_accounts FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "coa_admin_all" ON chart_of_accounts;
 CREATE POLICY "coa_admin_all"
   ON chart_of_accounts FOR ALL
   USING (
@@ -33,6 +35,7 @@ CREATE POLICY "coa_admin_all"
     )
   );
 
+DROP TRIGGER IF EXISTS trg_coa_updated_at ON chart_of_accounts;
 CREATE TRIGGER trg_coa_updated_at
   BEFORE UPDATE ON chart_of_accounts
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
@@ -73,7 +76,8 @@ INSERT INTO chart_of_accounts (code, name, account_type, normal_balance, display
   ('5800', 'Depreciation Expense', 'expense', 'debit', 58),
   ('5900', 'Bank Charges', 'expense', 'debit', 59),
   ('5950', 'Interest Expense', 'expense', 'debit', 60),
-  ('5990', 'Miscellaneous Expense', 'expense', 'debit', 61);
+  ('5990', 'Miscellaneous Expense', 'expense', 'debit', 61)
+ON CONFLICT (code) DO NOTHING;
 
 -- Set parent_code references after insert
 UPDATE chart_of_accounts SET parent_code = '1000' WHERE code IN ('1100', '1200', '1300', '1400', '1500');

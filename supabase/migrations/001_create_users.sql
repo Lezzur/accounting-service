@@ -1,7 +1,7 @@
 -- 001_create_users.sql
 -- Internal Toolbox users extending Supabase Auth
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name text NOT NULL,
   role text NOT NULL CHECK (role IN ('admin', 'accountant')),
@@ -11,14 +11,17 @@ CREATE TABLE users (
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "users_select_own" ON users;
 CREATE POLICY "users_select_own"
   ON users FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "users_update_own" ON users;
 CREATE POLICY "users_update_own"
   ON users FOR UPDATE
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "admin_select_all" ON users;
 CREATE POLICY "admin_select_all"
   ON users FOR SELECT
   USING (
@@ -36,6 +39,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
 CREATE TRIGGER trg_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();

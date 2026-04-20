@@ -1,7 +1,7 @@
 -- 009_create_deadlines.sql
 -- Auto-generated BIR and deliverable deadlines per client
 
-CREATE TABLE deadlines (
+CREATE TABLE IF NOT EXISTS deadlines (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   deadline_type text NOT NULL CHECK (deadline_type IN (
@@ -22,16 +22,18 @@ CREATE TABLE deadlines (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_deadlines_client_due ON deadlines(client_id, due_date);
-CREATE INDEX idx_deadlines_due_status ON deadlines(due_date, status) WHERE status != 'completed';
-CREATE UNIQUE INDEX idx_deadlines_unique ON deadlines(client_id, deadline_type, period_label);
+CREATE INDEX IF NOT EXISTS idx_deadlines_client_due ON deadlines(client_id, due_date);
+CREATE INDEX IF NOT EXISTS idx_deadlines_due_status ON deadlines(due_date, status) WHERE status != 'completed';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_deadlines_unique ON deadlines(client_id, deadline_type, period_label);
 
 ALTER TABLE deadlines ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "deadlines_all_authenticated" ON deadlines;
 CREATE POLICY "deadlines_all_authenticated"
   ON deadlines FOR ALL
   USING (auth.role() = 'authenticated');
 
+DROP TRIGGER IF EXISTS trg_deadlines_updated_at ON deadlines;
 CREATE TRIGGER trg_deadlines_updated_at
   BEFORE UPDATE ON deadlines
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();

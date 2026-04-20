@@ -1,7 +1,7 @@
 -- 002_create_leads.sql
 -- Sales pipeline: leads and lead activity log
 
-CREATE TABLE leads (
+CREATE TABLE IF NOT EXISTS leads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_name text NOT NULL,
   contact_name text NOT NULL,
@@ -16,22 +16,24 @@ CREATE TABLE leads (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_leads_stage ON leads(stage);
-CREATE INDEX idx_leads_created_at ON leads(created_at DESC);
-CREATE INDEX idx_leads_source ON leads(source);
+CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
 
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "leads_all_authenticated" ON leads;
 CREATE POLICY "leads_all_authenticated"
   ON leads FOR ALL
   USING (auth.role() = 'authenticated');
 
+DROP TRIGGER IF EXISTS trg_leads_updated_at ON leads;
 CREATE TRIGGER trg_leads_updated_at
   BEFORE UPDATE ON leads
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
 -- Lead activity log: immutable audit trail
-CREATE TABLE lead_activity_log (
+CREATE TABLE IF NOT EXISTS lead_activity_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   lead_id uuid NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
   action text NOT NULL,
@@ -40,10 +42,11 @@ CREATE TABLE lead_activity_log (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_lead_activity_lead_id ON lead_activity_log(lead_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lead_activity_lead_id ON lead_activity_log(lead_id, created_at DESC);
 
 ALTER TABLE lead_activity_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "lead_activity_select_authenticated" ON lead_activity_log;
 CREATE POLICY "lead_activity_select_authenticated"
   ON lead_activity_log FOR SELECT
   USING (auth.role() = 'authenticated');
@@ -58,6 +61,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_lead_created ON leads;
 CREATE TRIGGER trg_lead_created
   AFTER INSERT ON leads
   FOR EACH ROW EXECUTE FUNCTION fn_log_lead_created();
@@ -80,6 +84,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_lead_updated ON leads;
 CREATE TRIGGER trg_lead_updated
   AFTER UPDATE ON leads
   FOR EACH ROW EXECUTE FUNCTION fn_log_lead_updated();
