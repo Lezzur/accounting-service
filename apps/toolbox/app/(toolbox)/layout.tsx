@@ -2,6 +2,8 @@ import { SkipToContent } from "@numera/ui";
 import { Sidebar, BottomTabBar } from "./components/sidebar";
 import { NotificationCountProvider } from "./components/notification-count-context";
 
+export const dynamic = "force-dynamic";
+
 export default function ToolboxLayout({
   children,
 }: {
