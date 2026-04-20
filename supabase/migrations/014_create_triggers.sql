@@ -13,54 +13,67 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply to all tables with updated_at
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
 CREATE TRIGGER trg_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_leads_updated_at ON leads;
 CREATE TRIGGER trg_leads_updated_at
   BEFORE UPDATE ON leads
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_clients_updated_at ON clients;
 CREATE TRIGGER trg_clients_updated_at
   BEFORE UPDATE ON clients
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_gmail_connections_updated_at ON gmail_connections;
 CREATE TRIGGER trg_gmail_connections_updated_at
   BEFORE UPDATE ON gmail_connections
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_email_notifications_updated_at ON email_notifications;
 CREATE TRIGGER trg_email_notifications_updated_at
   BEFORE UPDATE ON email_notifications
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_chart_of_accounts_updated_at ON chart_of_accounts;
 CREATE TRIGGER trg_chart_of_accounts_updated_at
   BEFORE UPDATE ON chart_of_accounts
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_transactions_updated_at ON transactions;
 CREATE TRIGGER trg_transactions_updated_at
   BEFORE UPDATE ON transactions
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_invoices_updated_at ON invoices;
 CREATE TRIGGER trg_invoices_updated_at
   BEFORE UPDATE ON invoices
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_tasks_updated_at ON tasks;
 CREATE TRIGGER trg_tasks_updated_at
   BEFORE UPDATE ON tasks
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_deadlines_updated_at ON deadlines;
 CREATE TRIGGER trg_deadlines_updated_at
   BEFORE UPDATE ON deadlines
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_bir_form_templates_updated_at ON bir_form_templates;
 CREATE TRIGGER trg_bir_form_templates_updated_at
   BEFORE UPDATE ON bir_form_templates
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_bir_tax_form_records_updated_at ON bir_tax_form_records;
 CREATE TRIGGER trg_bir_tax_form_records_updated_at
   BEFORE UPDATE ON bir_tax_form_records
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS trg_system_settings_updated_at ON system_settings;
 CREATE TRIGGER trg_system_settings_updated_at
   BEFORE UPDATE ON system_settings
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -89,6 +102,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_lead_created ON leads;
 CREATE TRIGGER trg_lead_created
   AFTER INSERT ON leads
   FOR EACH ROW EXECUTE FUNCTION fn_log_lead_created();
@@ -126,6 +140,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_lead_updated ON leads;
 CREATE TRIGGER trg_lead_updated
   AFTER UPDATE ON leads
   FOR EACH ROW EXECUTE FUNCTION fn_log_lead_updated();
