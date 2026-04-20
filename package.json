@@ -2,11 +2,15 @@
   "name": "accounting-service",
   "private": true,
   "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "type-check": "turbo type-check"
+    "type-check": "turbo type-check",
+    "check-deploy": "pnpm install --frozen-lockfile && turbo run build"
   },
   "devDependencies": {
     "turbo": "^2.3.0",
