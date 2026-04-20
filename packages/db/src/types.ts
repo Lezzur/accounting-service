@@ -347,6 +347,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       leads: {
         Row: {
@@ -391,6 +392,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       clients: {
         Row: {
@@ -453,6 +455,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       chart_of_accounts: {
         Row: {
@@ -488,6 +491,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       email_notifications: {
         Row: {
@@ -532,6 +536,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       transactions: {
         Row: {
@@ -591,6 +596,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       invoices: {
         Row: {
@@ -647,6 +653,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       invoice_line_items: {
         Row: {
@@ -677,6 +684,7 @@ export interface Database {
           display_order?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       tasks: {
         Row: {
@@ -715,6 +723,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       deadlines: {
         Row: {
@@ -753,6 +762,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       financial_reports: {
         Row: {
@@ -794,6 +804,7 @@ export interface Database {
           exported_pdf_path?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       bir_tax_form_records: {
         Row: {
@@ -835,6 +846,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       draft_emails: {
         Row: {
@@ -876,6 +888,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       ai_corrections: {
         Row: {
@@ -908,6 +921,7 @@ export interface Database {
           correction_source?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       system_settings: {
         Row: {
@@ -931,6 +945,7 @@ export interface Database {
           updated_at?: string;
           updated_by?: string | null;
         };
+        Relationships: [];
       };
       document_attachments: {
         Row: {
@@ -960,6 +975,7 @@ export interface Database {
           size_bytes?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
