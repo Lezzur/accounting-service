@@ -19,19 +19,19 @@ export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
     );
     const current = OPTIONS[currentIndex];
     const next = OPTIONS[(currentIndex + 1) % OPTIONS.length];
-    const CurrentIcon = current.icon;
+    const NextIcon = next.icon;
     return (
       <button
         onClick={() => setTheme(next.value)}
-        title={`Theme: ${current.label} (click for ${next.label})`}
-        aria-label={`Theme: ${current.label}. Click to switch to ${next.label}.`}
+        title={`Switch to ${next.label} theme`}
+        aria-label={`Switch to ${next.label} theme. Currently ${current.label}.`}
         className={cn(
           "flex items-center justify-center rounded-md p-2",
           "text-[var(--muted-foreground)] hover:bg-slate-100 hover:text-[var(--foreground)]",
           "transition-colors duration-150",
         )}
       >
-        <CurrentIcon size={20} />
+        <NextIcon size={20} />
       </button>
     );
   }
