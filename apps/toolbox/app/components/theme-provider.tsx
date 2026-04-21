@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark";
 
 interface ThemeContextValue {
   theme: Theme;
@@ -10,7 +10,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "system",
+  theme: "light",
   setTheme: () => {},
 });
 
@@ -19,40 +19,21 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("numera-theme") as Theme | null;
-    if (stored && ["light", "dark", "system"].includes(stored)) {
+    const stored = localStorage.getItem("numera-theme");
+    if (stored === "light" || stored === "dark") {
       setThemeState(stored);
     }
     setMounted(true);
   }, []);
 
-  const applyTheme = useCallback((t: Theme) => {
-    const root = document.documentElement;
-    if (t === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      root.classList.toggle("dark", prefersDark);
-    } else {
-      root.classList.toggle("dark", t === "dark");
-    }
-  }, []);
-
   useEffect(() => {
     if (!mounted) return;
-    applyTheme(theme);
-  }, [theme, mounted, applyTheme]);
-
-  // Listen for system preference changes when in "system" mode
-  useEffect(() => {
-    if (theme !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => applyTheme("system");
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [theme, applyTheme]);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme, mounted]);
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);

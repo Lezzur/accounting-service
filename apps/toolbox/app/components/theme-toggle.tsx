@@ -1,13 +1,12 @@
 "use client";
 
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { cn } from "@numera/ui";
 
 const OPTIONS = [
   { value: "light" as const, icon: Sun, label: "Light" },
   { value: "dark" as const, icon: Moon, label: "Dark" },
-  { value: "system" as const, icon: Monitor, label: "System" },
 ];
 
 export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
