@@ -991,6 +991,7 @@ Deno.serve(async (req) => {
             amount: tx.amount,
             type: tx.type,
             category_code: assignCategory ? categorization.categoryCode : null,
+            category_confidence: categorization.confidence,
             status: 'pending',
             source_email_notification_id: notificationId,
             extraction_batch_id: extractionBatchId,
