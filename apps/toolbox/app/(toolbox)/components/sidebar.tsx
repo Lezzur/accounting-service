@@ -383,7 +383,7 @@ export function Sidebar() {
       <div className="shrink-0 border-t border-slate-200 p-2 space-y-0.5">
         {/* Theme toggle */}
         <div className={cn("flex items-center px-3 py-1.5", isCollapsed && "justify-center px-1")}>
-          <ThemeToggle />
+          <ThemeToggle collapsed={isCollapsed} />
         </div>
 
         {/* Settings */}
