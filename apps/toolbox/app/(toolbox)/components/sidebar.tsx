@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -68,22 +69,59 @@ function Tooltip({
   children: React.ReactNode;
   show: boolean;
 }) {
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+  const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setPortalReady(true);
+    return () => {
+      if (showTimer.current) clearTimeout(showTimer.current);
+    };
+  }, []);
+
   if (!show) return <>{children}</>;
+
+  const open = () => {
+    if (showTimer.current) clearTimeout(showTimer.current);
+    showTimer.current = setTimeout(() => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setCoords({ top: r.top + r.height / 2, left: r.right + 12 });
+    }, 200);
+  };
+  const close = () => {
+    if (showTimer.current) clearTimeout(showTimer.current);
+    setCoords(null);
+  };
+
   return (
-    <span className="relative flex items-center group/tooltip">
+    <span
+      ref={triggerRef}
+      className="relative flex items-center"
+      onMouseEnter={open}
+      onMouseLeave={close}
+      onFocus={open}
+      onBlur={close}
+    >
       {children}
-      <span
-        role="tooltip"
-        className={cn(
-          "pointer-events-none absolute left-full ml-3 z-50",
-          "whitespace-nowrap rounded-md px-2 py-1",
-          "bg-slate-900 text-white text-xs",
-          "opacity-0 group-hover/tooltip:opacity-100",
-          "transition-opacity duration-150 delay-200",
+      {portalReady && coords &&
+        createPortal(
+          <span
+            role="tooltip"
+            style={{ top: coords.top, left: coords.left, transform: "translateY(-50%)" }}
+            className={cn(
+              "pointer-events-none fixed z-[9999]",
+              "whitespace-nowrap rounded-md px-2 py-1",
+              "bg-slate-900 text-white text-xs",
+            )}
+          >
+            {label}
+          </span>,
+          document.body,
         )}
-      >
-        {label}
-      </span>
     </span>
   );
 }
