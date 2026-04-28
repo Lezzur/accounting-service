@@ -1,17 +1,15 @@
 # Barker Plan Evaluation
 
-**Plan:** `BARKER-PLAN-numera-accounting-2026-04-14.md` (v1)
-**Evaluated by:** L Lawliet (QA / BI)
-**Date:** 2026-04-16
+**Plan:** `/workspaces/l-lawliet/accounting-service/BARKER-PLAN-numera-accounting.md`
 **Verdict:** REVISE
-**Blocking issues:** 8
-**Warnings:** 14
+**Blocking issues:** 2
+**Warnings:** 7
 
 ---
 
 ## Summary
 
-The plan is well-structured and demonstrates thorough scope coverage for most of the Numera platform. Phase sequencing is sound, dependency graph is clean, prompts are self-contained and correctly instructed. However, evaluation surfaces **8 blocking issues** across build quality and spec alignment: an auth middleware task on the wrong model, an oversized UI component task, systemic schema naming conflicts with the Tech Spec, and four critical missing pieces — the Tasks table + Task Tracker UI, Gmail OAuth connection infrastructure, and two cron Edge Functions whose absence means the Gmail pipeline expires after 7 days and annual deadlines stop generating after Year 1. These must be resolved before the plan can safely run.
+The Numera Accounting Service Barker plan is architecturally excellent — 50 well-scoped tasks across 10 phases, comprehensive feature coverage across all three surfaces (marketing site, CRM, Workdesk), and thorough hardening on every AI pipeline and security-critical task. Two targeted fixes are required before execution: a migration file (`010_create_financial_reports.sql`) that appears in the `p2-schema-extended` prompt but is absent from its `expected_files`, which would leave the financial reports table uncreated and break Phase 7 and 8 downstream tasks; and a reference in `p8-cron-deadlines` to a `deadline_notifications` table that does not exist in the schema and has no corresponding migration, causing the deadline cron to fail at runtime.
 
 ---
 
@@ -19,11 +17,11 @@ The plan is well-structured and demonstrates thorough scope coverage for most of
 
 | Check | Result | Notes |
 |-------|--------|-------|
-| YAML validity | PASS | One fenced block, parses cleanly; `project.name` is kebab-case |
-| Task identity | PASS | 31 unique IDs, all `pN-*` prefixed, all fields present, models are `opus`/`sonnet` only |
-| Dependency graph | PASS | No circular deps, no self-refs, `p1-scaffold` is clean entry point, all `depends_on` refs exist |
-| Context sources | PASS | All aliases reference `"discovery"` (the only defined `input_files` alias); `sections: ["all"]` only in validation block |
-| Validation block | PASS | `checks` has build + type-check + lint; `fix_budget: 5`; build check present |
+| YAML validity | PASS | Valid YAML fenced block; all required top-level fields present |
+| Task identity | PASS | 50 unique kebab-case IDs, all prefixed with phase number (`p1-` through `p10-`); all required fields present on every task |
+| Dependency graph | PASS | All `depends_on` entries reference valid task IDs; no circular dependencies; `p1-monorepo-scaffold` has `depends_on: []` (entry point); cross-phase dependencies are forward-only |
+| Context sources | PASS | All aliases (`prd`, `tech-spec`, `api-spec`, `ui-design`, `discovery`) match `input_files` definitions; no task references an undefined alias |
+| Validation block | PASS | `checks` non-empty; `fix_budget: 5`; build, type-check, and lint all present; comprehensive 6-area hardening audit in `prompt` |
 
 ---
 
@@ -31,13 +29,13 @@ The plan is well-structured and demonstrates thorough scope coverage for most of
 
 | Check | Result | Severity | Notes |
 |-------|--------|----------|-------|
-| Model assignment | FAIL | BLOCKING | `p2-auth` on Sonnet creates auth middleware (security-critical). Ratio 38.7% Opus otherwise fine. |
-| Task granularity | FAIL | BLOCKING | `p3-ui-core` lists 9 `expected_files` (>8 threshold); 20+ components in scope. All other tasks within bounds. |
-| Prompt quality | PASS | — | All prompts self-contained, read-before-write, exact paths, no test/verify language |
-| Hardening coverage | PASS | — | Auth, DB, API, UI, external service tasks all have specific hardening directives |
-| Validation block quality | WARN | Warning | `context_sources` only includes `discovery`; PRD/Tech Spec/API Spec not loaded for Validator. Broad discovery sections help but miss spec-level contracts. |
-| File conflict safety | PASS | — | No overlapping `expected_files` between parallel tasks. One minor note: `p9-email-flow` updates `sidebar.tsx` (created by `p3-layout-toolbox`) but sidebar is not in its `expected_files` — update not formally tracked. |
-| Done/phase checks | WARN | Warning | Phase 8 `phase_check` uses `npm run build` in a `pnpm` workspace project (wrong package manager). Phase 9 has no `phase_check` field. All `done_check` commands are cheap `test -f` ✓ |
+| Model assignment | PASS | — | All AI pipeline, security, and financial logic tasks correctly assigned Opus: p3-auth, p5-transaction-grid, p6-ai-package, p6-gmail-webhook, p6-process-document, p6-categorize-transaction, p6-connect-gmail, p7-generate-report, p7-prefill-bir-form, p8-render-pdf, p8-send-invoice, p8-draft-email, p8-cron-deadlines. All CRUD, scaffold, and UI tasks Sonnet. Borderline: `p2-schema-extended` (Sonnet creating financial_reports + BIR template schema) — acceptable given the detailed prompt, but noted. |
+| Task granularity | PASS | — | All `estimated_minutes` 5–30. No prompt exceeds ~35 lines. All `expected_files` ≤ 4 files (though several prompts create more files than expected_files lists — see Warning 1). |
+| Prompt quality | PASS | — | All prompts are self-contained. Prompts instruct builders to read existing files before starting. No "run tests" or "verify it works" language. `p9-handle-contact-form` has one ambiguous instruction (rate limiting — see Warning 2). |
+| Hardening coverage | PASS | — | Every task with business logic has a specific `Hardening requirements` section. Auth, RLS, AI pipeline, encryption, and atomic operations are all covered with specific directives. No generic "handle errors properly" placeholders. |
+| Validation block | PASS/WARN | — | Build + type-check + lint present. No test runner (the plan has no test-writing tasks — acceptable for a build plan). `context_sources` covers prd, api-spec, and ui-design at `sections: ["all"]` but omits `tech-spec`. The hardening audit won't have context for encryption requirements (§6), data model constraints (§4.4), or AI pipeline specifics (§4.6). |
+| File conflicts | PASS | — | No parallel tasks share `expected_files`. Phase ordering enforces sequential execution between potentially conflicting tasks. |
+| Done/phase checks | PASS/WARN | — | All `done_check` commands are cheap `test -f` assertions. Phase 3 and Phase 9 have `phase_check: "pnpm run type-check"` (reasonable gates). Most phases have no explicit phase_check (fine per Barker schema). |
 
 ---
 
@@ -45,240 +43,128 @@ The plan is well-structured and demonstrates thorough scope coverage for most of
 
 | Spec | Result | Coverage | Gaps |
 |------|--------|----------|------|
-| PRD | FAIL | ~85% — marketing website, CRM pipeline, clients, invoicing, Workdesk all covered | Task Tracker (missing table + UI), Follow-up Email Drafting UI (function exists, no page task) |
-| Tech Spec | FAIL | Architecture correct; schema naming diverges from spec in 6+ columns | `email_inbox` vs `email_notifications`, `documents` vs `document_attachments`, `activities` vs `lead_activity_log`, `leads.email` vs `leads.contact_email`, `leads.status` vs `leads.stage`, `leads.lost_reason` vs `leads.close_reason`; missing `tasks`, `gmail_connections`, `system_settings`, `bir_form_templates`, `ai_corrections` tables |
-| API Spec | FAIL | Core CRUD, reports, exports covered | `connect-gmail` missing (can't provision Gmail); `cron-gmail-watch` missing (watch expires in 7 days); `cron-generate-deadlines` missing (deadlines stop after Year 1); `process-document` implemented as Server Action rather than Edge Function per spec |
-| UI Design | FAIL | 12 of 15 screens covered | Screen 13 (Task Tracker) missing; Screen 14 (Follow-up Email Drafting) missing; Screen 15 (Settings Page / Gmail connection) missing; Screen 8 (BIR Tax Form Preparation) only partially covered via generic report viewer — prior-year comparison sidebar not implemented |
+| PRD | PASS/WARN | ~49/50 features covered | `Feature: Invoice Sending from Workdesk` (PRD §Workdesk Module) — the Workdesk quick-action modal for sending invoices without switching to CRM — has no corresponding UI task. The `p8-send-invoice` Edge Function exists but the frontend modal component does not. |
+| Tech Spec | PASS | All architecture decisions addressed | All 17+ migrations covered across 4 schema tasks. All AI models (Haiku for classification/categorization, Sonnet Vision for OCR, Sonnet for narrative/email draft) correctly referenced. Turborepo, Next.js 14, Supabase Edge Functions (Deno) correctly scaffolded. |
+| API Spec | PASS | 14/14 Edge Functions covered (§6.1–§6.14 including all crons) | All PostgREST query patterns (§5.2.1–§5.2.12) referenced in task prompts. Error envelope `{error: {code, message, details, request_id}}` specified in hardening on every Edge Function. Rate limiting (§4) addressed. |
+| UI Design | PASS | 15/15 screens covered | Screen 1 (transaction grid), Screen 2 (row editing), Screen 3 (doc preview), Screen 4 (filtered grid), Screen 5 (homepage desktop), Screen 6 (homepage mobile), Screen 7 (lead pipeline), Screen 8 (BIR form), Screen 9 (report generator), Screen 10 (deadline tracker), Screen 11 (client profile), Screen 12 (invoice creation), Screen 13 (task tracker), Screen 14 (email drafting), Screen 15 (settings) — all have corresponding tasks with `ui-design` context. |
 
 ---
 
 ## Blocking Issues
 
-**B1** — `p2-auth` assigned `sonnet`; creates security-critical auth middleware
+**1. `010_create_financial_reports.sql` missing from `p2-schema-extended` expected_files.**
 
-Task `p2-auth` (Sonnet) creates Next.js middleware with session management, token refresh, fail-closed redirects to `/login`, and the OAuth callback handler. This is security-critical code. Per the evaluation rules, Sonnet on security-critical work is a blocking model assignment error.
+The `p2-schema-extended` prompt explicitly instructs creating five migration files:
 
-**B2** — `p3-ui-core` has 9 `expected_files` (threshold: >8 = BLOCKING)
+```
+008_create_tasks.sql
+009_create_deadlines.sql
+010_create_financial_reports.sql
+011_create_bir_templates.sql
+012_create_system_settings.sql
+```
 
-The task lists 9 files in `expected_files` and asks for 20+ shadcn/ui components in a single prompt. The file count alone triggers the blocking threshold. The task should be split into at minimum `p3-ui-primitives` (Button, Input, Textarea, Label, Checkbox, Select, Separator, Avatar, Skeleton) and `p3-ui-overlays` (Dialog, Sheet, Popover, Command, Calendar, Tooltip, Toast/Sonner, DropdownMenu, Tabs, Form).
+But `expected_files` lists only four — `010_create_financial_reports.sql` is absent:
 
-**B3** — Schema naming conflicts with Tech Spec cause systemic TypeScript type failures
+```yaml
+# current (broken)
+expected_files:
+  - "supabase/migrations/008_create_tasks.sql"
+  - "supabase/migrations/009_create_deadlines.sql"
+  - "supabase/migrations/011_create_bir_templates.sql"
+  - "supabase/migrations/012_create_system_settings.sql"
+done_check: "test -f supabase/migrations/009_create_deadlines.sql && test -f supabase/migrations/012_create_system_settings.sql"
 
-The plan's `p2-schema-a` creates columns that diverge from the Tech Spec and API Spec's query patterns:
+# correct
+expected_files:
+  - "supabase/migrations/008_create_tasks.sql"
+  - "supabase/migrations/009_create_deadlines.sql"
+  - "supabase/migrations/010_create_financial_reports.sql"
+  - "supabase/migrations/011_create_bir_templates.sql"
+  - "supabase/migrations/012_create_system_settings.sql"
+done_check: "test -f supabase/migrations/009_create_deadlines.sql && test -f supabase/migrations/010_create_financial_reports.sql && test -f supabase/migrations/012_create_system_settings.sql"
+```
 
-| Plan (schema) | Tech Spec / API Spec |
-|---|---|
-| `email_inbox` (table) | `email_notifications` |
-| `documents` (table) | `document_attachments` |
-| `activities` (generic table) | `lead_activity_log` (dedicated) |
-| `leads.email` | `leads.contact_email` |
-| `leads.status` | `leads.stage` |
-| `leads.lost_reason` | `leads.close_reason` |
+The `financial_reports` table is critical infrastructure for three downstream phases:
+- `p7-generate-report`: INSERTs into `financial_reports` as its primary output
+- `p7-report-generator-ui`: queries `financial_reports` to list previously generated reports
+- `p8-render-pdf`: reads `financial_reports.ai_narrative_approved` as the narrative safety gate
 
-The API Spec has explicit TypeScript query patterns using `stage`, `contact_email`, and `email_notifications`. Building the application against the plan's schema will produce type errors throughout tasks `p4-crm-api`, `p4-crm-pipeline`, `p5-wd-api`, `p9-email-flow`, and every task that reads leads or email inbox data.
+If the Sonnet builder follows the `expected_files` contract over the full prompt text and skips creating `010`, none of the Phase 7 or Phase 8 report features will function. The `done_check` currently verifies only 009 and 012, so the omission would go undetected until Phase 7 tasks fail with "relation does not exist" errors.
 
-**B4** — `tasks` table missing from schema; Task Tracker UI (Screen 13) has no task
+**Fix:** Add `"supabase/migrations/010_create_financial_reports.sql"` to `p2-schema-extended.expected_files` and include it in the `done_check`. One-line edit.
 
-The `tasks` table is defined in the Tech Spec and API Spec (`5.1 Exposed Tables`), referenced in the ERD (`leads →{ tasks`, `clients →{ tasks`), and Screen 13 (Task Tracker) is in the UI Design. The plan has no migration for this table, no CRUD layer, and no UI task. This is a core CRM feature (the sidebar in Screen 7 shows "Tasks" as a nav item) that cannot be built from the current plan.
+---
 
-**B5** — `gmail_connections` table missing; Settings Page (Screen 15) and `connect-gmail` OAuth flow absent
+**2. `p8-cron-deadlines` references `deadline_notifications` table that does not exist in the schema.**
 
-The `gmail_connections` table stores decrypted OAuth tokens used by both the Gmail sync function and the `process-document` Edge Function (see API Spec §6.1: "Fetch Gmail attachments using decrypted access token from `gmail_connections`"). Without this table and the `connect-gmail` OAuth flow:
-- The Gmail ingestion pipeline has no credentials to call Gmail API
-- The Settings Page (Screen 15, admin-only Gmail connection management) has no implementation
+The `p8-cron-deadlines` prompt instructs (step 3 of the cron flow):
 
-The entire email-to-transaction pipeline is non-functional until B5 is resolved.
+```
+3. For deadlines within 7 days: upsert into a deadline_notifications record for in-app banner
+```
 
-**B6** — `cron-gmail-watch` Edge Function missing; Gmail push notification subscription expires after 7 days
+The tech spec defines 17 migrations (001–017). No migration creates a `deadline_notifications` table. The complete schema table inventory is: `users`, `leads`, `lead_activity_log`, `clients`, `client_activity_log`, `gmail_connections`, `email_notifications`, `document_attachments`, `chart_of_accounts`, `transactions`, `ai_corrections`, `invoices`, `invoice_line_items`, `tasks`, `deadlines`, `financial_reports`, `bir_form_templates`, `bir_form_field_mappings`, `bir_tax_form_records`, `system_settings`, `draft_emails`. `deadline_notifications` is not in this list.
 
-The Gmail API `watch()` subscription that enables push notifications expires after 7 days maximum (Google requirement). The Tech Spec (§4.1 Edge Functions) defines `cron-gmail-watch` to renew this subscription. The plan has no task for this function. After 7 days of running the deployed system, the Gmail push pipeline silently stops receiving new emails. This is a production-critical omission.
+The builder will generate code such as:
+```typescript
+await supabase.from('deadline_notifications').upsert({ ... })
+```
 
-**B7** — `cron-generate-deadlines` Edge Function missing; deadline instances stop after Year 1
+This will fail at runtime with a Postgres "relation does not exist" error on every invocation of step 3. Although the hardening requirements say "Handle partial failures gracefully — don't abort on single deadline error," this error will occur for every deadline processed, silently breaking the in-app notification banner feature entirely.
 
-The plan generates deadline instances for 12 months at client onboarding (`p9-onboarding-flow`). The Tech Spec defines `cron-generate-deadlines` (annual cron) to generate the next year's instances. Without it, every client's deadline tracker becomes empty 12 months after onboarding. The deadline tracking feature stops functioning at the 12-month mark.
+Per the PRD, the "deadlines due this week" banner is described as "dismissible per session" — a client-side feature derivable directly from the `deadlines` table in the UI without a server-side notifications table.
 
-**B8** — `cron-check-approaching-deadlines` Edge Function missing; proactive deadline reminders absent
+**Fix (option A — simplest):** Remove step 3 from `p8-cron-deadlines`. The Workdesk UI already queries `deadlines` to render the tracker; the approaching deadline banner can be derived client-side from `due_date <= now()+7 days` at page load.
 
-The Tech Spec defines a daily cron (`cron-check-approaching-deadlines`, "Supabase pg_cron — daily 08:00 PHT") that checks for approaching deadlines and auto-drafts reminder emails. This is the automated reminder system described in the PRD (deadline tracking section). Without it, the accountant has no proactive notifications — only manual review of the deadline tracker.
+**Fix (option B — if a dedicated table is preferred):** Add a `deadline_notifications` migration to `p2-schema-policies` or a new task, with columns: `client_id FK, deadline_id FK, due_date, period_label, created_at`. Index on `(client_id, deadline_id)` for idempotency.
 
 ---
 
 ## Warnings
 
-**W1** — Monetary precision: plan uses `numeric(12,2)` / `numeric(14,2)`; Tech Spec specifies `numeric(15,2)` everywhere
+1. **`p6-ai-package` `expected_files` omits `generate-narrative.ts`, `draft-email.ts`, and `index.ts`.** The task prompt creates 7 files but `expected_files` lists only 4. Two of the missing files are directly imported by downstream tasks: `p7-generate-report` reads `packages/ai/src/prompts/generate-narrative.ts`, and `p8-draft-email` reads `packages/ai/src/prompts/draft-email.ts`. The prompt is explicit enough that a builder will create all 7 files, but the `done_check` won't verify the critical missing files. Recommend adding all 7 to `expected_files` and adding `generate-narrative.ts` and `draft-email.ts` to the `done_check`.
 
-For a Philippine accounting firm handling large invoices (e.g., corporate clients with multi-million peso transactions), the plan's 12-digit precision caps at ₱9,999,999,999.99. The Tech Spec mandates 15,2 (`numeric(15,2)`) throughout. Align the plan's schema directives to `numeric(15,2)`.
+2. **`p9-handle-contact-form` rate limiting includes an in-memory option that won't work in serverless.** The prompt says: "Rate limit: 5 per IP per hour (implement via simple counter table or in-memory)." In-memory state does not persist across Supabase Edge Function invocations on Deno. A builder could implement the in-memory option, pass local testing, and silently fail to enforce rate limits in production. Recommend removing "or in-memory" and specifying a Postgres counter table: `rate_limit_counters(ip TEXT, window_start TIMESTAMPTZ, count INT)` with `ON CONFLICT DO UPDATE`.
 
-**W2** — `bir_form_templates`, `bir_form_field_mappings`, `bir_tax_form_records` tables missing from schema
+3. **Validation block `context_sources` omits `tech-spec`.** The validator receives full context for PRD, API spec, and UI design — but not the tech spec. The hardening audit won't have context for: AES-256-GCM token encryption requirements (§6), AI pipeline confidence thresholds and fallback chains (§4.6), data model constraints (§4.4, e.g. `amount > 0`, `ON DELETE RESTRICT` on financial tables). Recommend adding `{alias: "tech-spec", sections: ["4.4", "4.6", "6"]}` to `validation.context_sources`.
 
-The Discovery explicitly states "Template system must be easily updatable. Forms are data-driven, not hardcoded." The Tech Spec defines these three tables for the BIR template system. The plan's `p6-ai-reports/bir.ts` hardcodes form field computations, bypassing the maintainable template architecture. When BIR updates forms (which happens periodically), Rick must edit TypeScript logic rather than database records.
+4. **No automated test tasks in the plan.** None of the 50 tasks write test files and `validation.checks` does not include a test runner. For an accounting application processing financial data (OCR extraction, BIR form field mapping evaluation, monetary precision), the absence of automated tests means edge cases are never computationally verified. The comprehensive hardening audit partially compensates. Consider adding test tasks for `packages/ai/` (prompt/validation logic) and `prefill-bir-form` (topological sort, computed field evaluation) post-build.
 
-**W3** — `ai_corrections` table missing from schema
+5. **`Feature: Invoice Sending from Workdesk` has no UI task.** The PRD defines this as a distinct feature: a quick-action modal within the Workdesk client view that lists Draft invoices and allows sending without navigating to CRM. The `p8-send-invoice` Edge Function exists, but the frontend modal component is not in any task's `expected_files`. Accountants must navigate to the CRM Invoices module to send — the Workdesk convenience path described in the PRD is absent. Consider adding a small Sonnet task (Phase 5 or Phase 8) for the `workdesk-send-invoice-modal.tsx` component.
 
-The API Spec (§5.2.6) defines AI correction tracking: when the accountant edits an AI-extracted field, the frontend writes to `ai_corrections` before updating the transaction. This creates a learning loop for model improvement and an audit trail. No migration task covers this table.
+6. **`p2-schema-extended` is Sonnet despite creating financial and BIR data models.** The task creates `financial_reports` (with `ai_narrative_approved` logic), `bir_form_templates` (with `template_layout JSONB` driving PDF rendering), and `bir_form_field_mappings` (with 5-type `mapping_expression JSONB` schema including `computed` formula evaluation). These are complex financial data structures. The task prompt mirrors the tech spec verbatim, which largely compensates — Sonnet can follow detailed instructions. Borderline; Opus would add a safety margin for the JSONB expression schema design.
 
-**W4** — `system_settings` table missing from schema
-
-The API Spec lists `system_settings` as an admin-only table. The Settings Page (Screen 15) reads and writes system configuration. Without this table, system-level configuration has no persistence layer.
-
-**W5** — `process-document` implemented as Next.js Server Action rather than Supabase Edge Function
-
-The API Spec defines `process-document` as an Edge Function at `supabase/functions/process-document`. The plan implements it as `apps/toolbox/src/lib/workdesk/actions/process-document.ts` (Server Action). Key implications:
-- Claude Vision API key must be in Vercel environment, not Supabase secrets
-- Next.js Server Actions have a 30-second default timeout; document processing can take up to 120 seconds (API Spec §6.1 timeout)
-- The `409 CONFLICT` (already processing check) requires shared state — easier in Supabase Edge than distributed Next.js
-
-**W6** — `send-invoice` implemented as Server Action; requires Gmail OAuth credentials not available in Next.js context
-
-`sendInvoice()` in `p4-crm-invoicing` must call Gmail API to send the invoice email. The Gmail OAuth tokens are stored in `gmail_connections` (Supabase). A Server Action would need to expose Gmail credentials to the Next.js runtime. The Tech Spec directs this to an Edge Function with access to Supabase secrets.
-
-**W7** — `send-email` Edge Function not covered
-
-The API Spec defines `send-email` for general Gmail send (follow-up emails, etc.). No task creates this function.
-
-**W8** — Follow-up Email Drafting UI (Screen 14) has no task
-
-`packages/ai/src/email.ts` exports `draftFollowUpEmail()` (created by `p6-ai-email`), but there is no task for the UI layer: a modal/drawer within client context, prompt input, AI draft review, send/discard actions. Screen 14 is in the UI Design.
-
-**W9** — BIR Tax Form Preparation (Screen 8) not separately implemented; prior-year comparison sidebar absent
-
-The plan's `p7-reports-ui` treats BIR forms as generic report cards. Screen 8 specifies a distinct UX: per-field editability (editable/read-only/manual-override/missing-data states), a prior-year comparison sidebar with YoY deltas, stale-template warning banner, and field-level validation on export. The generic report viewer (`report-table.tsx`) does not implement these patterns.
-
-**W10** — `p7-exports` reads `apps/toolbox/src/lib/invoicing/` but has no dependency on `p4-crm-invoicing`
-
-The prompt for `p7-exports` says "Read apps/toolbox/src/lib/invoicing/ for invoice types." The invoicing module (`queries.ts`, `actions.ts`) is created by `p4-crm-invoicing`. `p7-exports` depends only on `p6-ai-reports`. If the Barker scheduler runs `p7-exports` before `p4-crm-invoicing` completes (possible, given their dependency chains don't intersect), the invoicing files won't exist. Add `p4-crm-invoicing` to `p7-exports.depends_on`.
-
-**W11** — Validation `context_sources` only includes `discovery`; key specs not loaded
-
-The Validator prompt performs a broad hardening audit, but its only context source is `DISCOVERY.md`. The PRD feature inventory, Tech Spec schema definitions, and API Spec error contracts aren't available to the Validator. Consider adding the spec files to `input_files` and referencing them in `validation.context_sources`.
-
-**W12** — Phase 8 `phase_check` uses `npm run build` in a `pnpm` workspace
-
-```yaml
-phase_check: "cd apps/web && npm run build"
-```
-
-The project is configured as a `pnpm` workspace (`pnpm-workspace.yaml`, scaffolded in `p1-scaffold`). Using `npm` here will bypass workspace resolution. Change to: `cd apps/web && pnpm run build` or `pnpm turbo build --filter=web`.
-
-**W13** — Phase 9 has no `phase_check`
-
-Integration & Polish phase has no gate. After `p9-states`, `p9-email-flow`, and `p9-onboarding-flow` all complete, there's no verification that the integrated application compiles. Add `phase_check: "pnpm run type-check && pnpm run lint"`.
-
-**W14** — `p4-crm-invoicing` (6 files) and `p5-wd-api` (7 files) exceed the 5-file split indicator
-
-Both tasks are above the 5-file warning threshold. They are within the 8-file blocking threshold and have well-scoped prompts, so execution is expected to succeed — but they are candidates for splitting if revision cycles introduce instability in these tasks.
+7. **`p4-lead-detail` does not specify audit logging for the "Convert to Client" action.** The lead detail drawer includes a "Convert to Client" flow (confirmation modal → create Client record → navigate to profile). The task hardening requirements do not explicitly instruct the builder to INSERT into `lead_activity_log` with `action='converted_to_client'`. The database triggers handle stage changes but not the conversion action specifically. Minor gap — the builder may or may not add the conversion audit entry.
 
 ---
 
-## Revision Manifest
+## Recommendations
+
+1. Fix both blocking issues before running `barker run`. The `expected_files` fix for `p2-schema-extended` is a one-line edit. The `deadline_notifications` issue requires either removing step 3 from the cron prompt (simplest) or adding a migration task.
+
+2. Add `generate-narrative.ts` and `draft-email.ts` to `p6-ai-package.expected_files` and `done_check`.
+
+3. In `p9-handle-contact-form`, replace "implement via simple counter table or in-memory" with an explicit Postgres counter table specification.
+
+4. Add `tech-spec` sections `["4.4", "4.6", "6"]` to `validation.context_sources`.
+
+5. Consider adding a UI task for the Workdesk "Send Invoice" quick-action modal (PRD feature gap).
+
+6. The model assignments, dependency graph, hardening directives, AI pipeline decomposition, and UI/spec coverage are all strong. Once the two blocking issues are resolved, the plan should execute cleanly.
 
 ---
 
-**R1** | BLOCKING | build-quality
-**Affected tasks:** `p2-auth`
-**Description:** `p2-auth` is assigned `model: "sonnet"` but creates security-critical auth middleware, session refresh logic, and OAuth callback handling.
-**Required fix:** Change `p2-auth` model to `"opus"`.
-**Acceptance criteria:** `p2-auth.model == "opus"` in the YAML.
+## Decisions
 
----
-
-**R2** | BLOCKING | build-quality
-**Affected tasks:** `p3-ui-core`
-**Description:** `p3-ui-core` lists 9 `expected_files` and scopes 20+ components. `expected_files` count exceeds the 8-file blocking threshold.
-**Required fix:** Split `p3-ui-core` into two tasks using `a/b` chunking:
-- `p3-ui-core-a` (Sonnet): primitive components — Button, Input, Textarea, Label, Select, Checkbox, Separator, Avatar, Skeleton, Badge. Estimated 15 min.
-- `p3-ui-core-b` (Sonnet): overlay/composite components — Dialog, Sheet, Popover, Command, Calendar, Tooltip, Toast/Sonner, DropdownMenu, Tabs, Form, Card, Table. Depends on `p3-ui-core-a`. Estimated 20 min.
-Update all tasks that `depends_on: ["p3-ui-core"]` to depend on `["p3-ui-core-b"]`.
-**Acceptance criteria:** No task has `expected_files` count > 8. Tasks depending on the former `p3-ui-core` now depend on `p3-ui-core-b`.
-
----
-
-**R3** | BLOCKING | spec-alignment
-**Affected tasks:** `p2-schema-a`, and downstream tasks `p4-crm-api`, `p4-crm-pipeline`, `p5-wd-api`, `p9-email-flow`
-**Description:** The plan creates schema column names that diverge from the Tech Spec and API Spec query contracts. This propagates incorrect TypeScript types into every downstream task.
-**Required fix:** Align `p2-schema-a` schema to match the Tech Spec exactly:
-
-| Change in `p2-schema-a` | Fix |
-|---|---|
-| `leads.email` | Rename to `contact_email` |
-| `leads.status` | Rename to `stage` |
-| `leads.lost_reason` | Rename to `close_reason` |
-| Table `activities` | Replace with `lead_activity_log` scoped to leads, with `action` and `details` jsonb columns (see Tech Spec §4.4 `lead_activity_log` definition) |
-
-In `p2-schema-b`, rename:
-- Table `email_inbox` → `email_notifications`
-- Table `documents` → `document_attachments`
-
-Update TypeScript types in `packages/db/src/types/database.ts` to use the corrected names. Update `p4-crm-api` and `p5-wd-api` prompt context to reference the corrected names.
-**Acceptance criteria:** Schema table and column names match the Tech Spec §4.4 definitions verbatim. TypeScript types reflect the corrected names.
-
----
-
-**R4** | BLOCKING | spec-alignment
-**Affected tasks:** `p2-schema-a` (schema gap), new task needed for UI
-**Description:** No `tasks` table in the schema; Task Tracker (Screen 13 in UI Design) has no implementation task.
-**Required fix:**
-1. Add `tasks` table to `p2-schema-a`:
-   - `id` (uuid PK), `title` (text NOT NULL), `description` (text), `status` (text CHECK IN ('todo','in_progress','done')), `priority` (text CHECK IN ('low','medium','high')), `due_date` (date), `linked_entity_type` (text CHECK IN ('lead','client')), `linked_entity_id` (uuid), `assigned_to` (uuid FK→users), `created_by` (uuid FK→users), `created_at`/`updated_at` (timestamptz). Add indexes on `(status, due_date)` and `(linked_entity_type, linked_entity_id)`.
-2. Add a new task `p4-crm-tasks` (Sonnet, depends_on: `["p3-layout-toolbox", "p4-crm-api"]`):
-   - CRM task tracker page at `apps/toolbox/src/app/(authenticated)/crm/tasks/page.tsx`
-   - DataGrid: Title, Linked Entity, Priority badge, Due Date, Status, Assigned To, Actions
-   - Quick-add task dialog, mark complete, filter by status/entity/assignee
-   - Hardening: empty state, loading skeleton, overdue styling (red if due_date < today), 404 for linked entities
-3. Update the sidebar nav in `p3-layout-toolbox` (or note in `p4-crm-tasks` to update `sidebar.tsx`) to include the Tasks nav item under CRM (consistent with Screen 7 showing "Tasks" in CRM nav).
-**Acceptance criteria:** `tasks` table in `p2-schema-a` migration. New task `p4-crm-tasks` exists in Phase 4. Task Tracker page route created.
-
----
-
-**R5** | BLOCKING | spec-alignment
-**Affected tasks:** `p2-schema-b` (schema gap), new task needed
-**Description:** No `gmail_connections` table in schema; no `connect-gmail` OAuth flow; Settings Page (Screen 15) absent. Without `gmail_connections`, `p6-ai-email` cannot retrieve OAuth tokens for Gmail API calls (API Spec §6.1 step 3: "Fetch Gmail attachments using decrypted access token from `gmail_connections`").
-**Required fix:**
-1. Add `gmail_connections` table to `p2-schema-b`:
-   - `id` (uuid PK), `client_id` (uuid FK→clients nullable), `email_address` (text NOT NULL unique), `access_token_encrypted` (text NOT NULL), `refresh_token_encrypted` (text NOT NULL), `token_expiry` (timestamptz NOT NULL), `watch_expiry` (timestamptz), `watch_history_id` (text), `is_active` (bool DEFAULT true), `connected_by` (uuid FK→users), `created_at`/`updated_at`.
-   - RLS: admin only.
-2. Add a new task `p9-settings-page` (Opus, depends_on: `["p3-layout-toolbox", "p2-schema-b"]`):
-   - Settings page at `apps/toolbox/src/app/(authenticated)/settings/page.tsx` — admin-only route
-   - Gmail connection card: shows connected email, expiry, Disconnect button. "Connect Gmail" triggers OAuth with `connect-gmail` Edge Function
-   - `supabase/functions/connect-gmail/index.ts` — OAuth token exchange, encrypt and store in `gmail_connections`
-   - Hardening: admin role check (403 for non-admin), token encryption at rest, never log tokens, handle revoked refresh tokens
-**Acceptance criteria:** `gmail_connections` table in `p2-schema-b`. Settings page task exists. `connect-gmail` Edge Function task exists.
-
----
-
-**R6** | BLOCKING | spec-alignment
-**Affected tasks:** new task needed
-**Description:** `cron-gmail-watch` Edge Function absent. Gmail's `watch()` API subscription expires after exactly 7 days. Without renewal, push notifications stop and the email ingestion pipeline silently dies.
-**Required fix:** Add task `p9-cron-gmail-watch` (Sonnet, depends_on: `["p6-ai-email", "p9-settings-page"]`):
-- `supabase/functions/cron-gmail-watch/index.ts` — Called by Supabase pg_cron every 6 days. For each active `gmail_connections` row: call Gmail `users.watch()` with the Pub/Sub topic, update `watch_expiry` and `watch_history_id`.
-- Hardening: handle revoked OAuth tokens (mark connection inactive, don't throw), log renewal failures, idempotent (renewing early is safe), never log tokens.
-**Acceptance criteria:** `supabase/functions/cron-gmail-watch/index.ts` in expected_files. Task exists in Phase 9.
-
----
-
-**R7** | BLOCKING | spec-alignment
-**Affected tasks:** new task needed
-**Description:** `cron-generate-deadlines` Edge Function absent. Client deadline instances are generated for 12 months at onboarding. After that, the deadline tracker goes empty. The Tech Spec defines an annual cron to generate the next year's instances.
-**Required fix:** Add task `p9-cron-deadlines` (Sonnet, depends_on: `["p5-wd-api"]`) — can be combined with R6 task or separate:
-- `supabase/functions/cron-generate-deadlines/index.ts` — Runs annually (December 1). For each active client with active deadline templates, generates instances for the coming year. Idempotent (skip if instances already exist for that period).
-- `supabase/functions/cron-check-approaching-deadlines/index.ts` — Runs daily at 08:00 PHT. Finds deadline instances due within 7 days and overdue. Calls `draft-email` AI function to generate reminder drafts. Stores in a `reminders` table or logs to activities.
-- Hardening: idempotent instance generation, skip inactive clients, timezone Asia/Manila for due date calculations, never block on single-client failure.
-**Acceptance criteria:** Both cron functions have tasks. `cron-generate-deadlines` and `cron-check-approaching-deadlines` Edge Functions appear in expected_files.
-
----
-
-**R8** | BLOCKING | spec-alignment
-**Affected tasks:** `p7-exports` (missing dependency)
-**Description:** `p7-exports` prompt instructs the instance to read `apps/toolbox/src/lib/invoicing/` (created by `p4-crm-invoicing`) but `p4-crm-invoicing` is not in `p7-exports.depends_on`. Barker may schedule `p7-exports` before `p4-crm-invoicing` completes. *(Promoted from warning given the dependency graph impact on execution correctness.)*
-**Required fix:** Add `"p4-crm-invoicing"` to `p7-exports.depends_on`.
-**Acceptance criteria:** `p7-exports.depends_on` includes `"p4-crm-invoicing"`.
-
----
-
-*Warnings W1–W14 do not block execution but should be addressed in the same revision for plan quality.*
-
-Key warnings to address alongside the blocking fixes:
-- **W3** (schema names): align `numeric` precision to `15,2` throughout `p2-schema-a` and `p2-schema-b`
-- **W2** (BIR templates): add `bir_form_templates`, `bir_form_field_mappings`, `bir_tax_form_records` tables to `p2-schema-b` if the template-driven BIR architecture from DISCOVERY is to be maintained
-- **W12** (Phase 8 phase_check): change `npm run build` to `pnpm run build` or `pnpm turbo build --filter=web`
-- **W13** (Phase 9 no gate): add `phase_check: "pnpm run type-check && pnpm run lint"` to phase 9
+| # | Decision | Rationale |
+|---|----------|-----------|
+| EV-01 | `010_create_financial_reports.sql` missing from `p2-schema-extended.expected_files` — **blocking** | The `financial_reports` table is consumed by p7-generate-report (INSERT), p7-report-generator-ui (SELECT history), and p8-render-pdf (ai_narrative_approved gate). A missing migration causes all three tasks to fail with relation-not-found errors. The done_check verifying only 009 and 012 would not detect the omission. |
+| EV-02 | `deadline_notifications` table reference in `p8-cron-deadlines` — **blocking** | No migration creates this table. The tech spec schema inventory (17 migrations, 21 tables) does not include it. The cron will generate code against a nonexistent relation, causing a Postgres error on every execution of step 3. The in-app banner is derivable from the `deadlines` table without a dedicated notifications table. |
+| EV-03 | `p6-ai-package` incomplete `expected_files` — **warning, not blocking** | The prompt is complete and explicitly names all 7 files. Builders will likely create them all. The risk is low because downstream task prompts explicitly name the imported files (`generate-narrative.ts`, `draft-email.ts`), providing a late-stage catch if they're missing. But the done_check gap is real. |
+| EV-04 | `p9-handle-contact-form` in-memory rate limiting option — **warning, not blocking** | The builder is also offered "simple counter table" which works correctly. The plan will build; rate limiting may be ineffective in production if the builder chooses in-memory, but this does not break the build or other features. |
+| EV-05 | Validation block missing tech-spec — **warning, not blocking** | PRD, API spec, and UI design provide sufficient context for ~80% of the hardening audit. Tech spec would improve coverage for encryption and AI pipeline specifics but is not required for the audit to produce value. |
+| EV-06 | No test tasks — **warning, not blocking** | Acceptable for a rapid build plan. The 6-area hardening audit compensates for the absence of automated tests at the plan execution stage. Testing would be a post-build activity for this project. |
+| EV-07 | `Feature: Invoice Sending from Workdesk` missing — **warning, not blocking** | The accountant can still send invoices from the CRM module. The Workdesk quick-action path is a PRD convenience feature, not core functionality. The risk is an incomplete PRD feature, not a technical failure. |
+| EV-08 | `p2-schema-extended` Sonnet model — **not flagged as blocking** | The task prompt precisely mirrors the tech spec schema definitions, leaving minimal room for creative interpretation. The risk of incorrect constraint design is low given the provided context. Not a correctness violation per BP-08. |
+| EV-09 | Full three-pass evaluation executed | PRD, Tech Spec, API Spec, UI Design all read in full. All 50 tasks reviewed across all 10 phases. All migration file references cross-checked against the tech spec schema and migration list. All 14 Edge Function specs verified against plan tasks. All 15 UI Design screens mapped to tasks. |
