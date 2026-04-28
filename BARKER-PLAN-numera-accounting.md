@@ -1,5 +1,26 @@
 # Barker Build Plan — Numera Accounting Service
 
+## Revision Notes (v2 — addresses 2026-04-16 evaluation verdict)
+
+This plan revises v1 (2026-04-14) to resolve all 8 blocking issues from L Lawliet's evaluation:
+
+| Issue | Resolution |
+|-------|------------|
+| **R1** Auth on Sonnet | `p3-auth` is now **Opus** (session, OAuth callback, role enforcement) |
+| **R2** UI core task >8 files | Foundation UI is split: `p1-shared-ui-core` (4 files) + `p1-data-table` (Opus, 2 files) |
+| **R3** Schema name divergence | Schema uses spec-aligned names: `lead_activity_log`, `email_notifications`, `document_attachments`, `contact_email`, `stage`, `close_reason` |
+| **R4** `tasks` table + Task Tracker | `tasks` table in `p2-schema-extended`; `p4-task-tracker` task added |
+| **R5** `gmail_connections` + Settings + OAuth | `gmail_connections` in `p2-schema-auth-crm`; `p6-connect-gmail` Edge Function; `p10-settings-page` |
+| **R6** `cron-gmail-watch` missing | `p8-cron-gmail-watch` (renews 7-day Gmail watch) |
+| **R7** `cron-generate-deadlines` missing | Bundled into `p7-deadline-edge-fns` (annual cron) |
+| **R8** `cron-check-approaching-deadlines` missing | `p8-cron-deadlines` (daily 08:00 PHT) |
+
+Warnings addressed: W1 (`numeric(15,2)` enforced in `p2-schema-financial`), W2 (`bir_form_templates`/`bir_form_field_mappings`/`bir_tax_form_records` in `p2-schema-extended`), W3 (`ai_corrections` in `p2-schema-financial`), W4 (`system_settings` in `p2-schema-extended`), W5/W6/W7 (`process-document`/`send-invoice`/`send-email` are Edge Functions, not Server Actions), W8 (`p8-email-draft-ui` for Screen 14), W11 (validation now references `prd`+`api-spec`+`ui-design`), W12 (Phase 8 `phase_check: "pnpm run type-check"`), W13 (Phase 9 has `phase_check`).
+
+Task IDs preserved from v1 where they survived the restructure; renamed/added IDs documented below in the Decisions table.
+
+---
+
 ```yaml
 # ============================================================
 # BARKER BUILD PLAN — Numera Accounting Service
@@ -1736,6 +1757,7 @@ phases:
   - id: "phase-8"
     name: "Email & Export"
     description: "PDF generation, Google Sheets export, invoice/email sending, AI email drafting, Gmail cron jobs"
+    phase_check: "pnpm run type-check"
 
     tasks:
       # --------------------------------------------------------
